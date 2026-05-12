@@ -1,113 +1,168 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
-import { getAccommodation } from '../../data/store';
-import { syncAccommodation, saveAccommodation } from '../../data/supabaseStore';
+import { supabase } from '../../lib/supabase';           // ← 직접 호출
+import { updateAccommodation } from '../../data/store';  // in-memory 갱신용
 import { colors, spacing, radius, typography } from '../../constants/theme';
+
+const HOUSE_ID = 'bali-cozy-house';
 
 export function AdminEditInfoScreen() {
   const navigation = useNavigation();
 
-  // 폼 상태 — 초기값은 in-memory(앱 기동 직후 mockData)
-  // useFocusEffect에서 Supabase 최신값으로 덮어씀
-  const acc = getAccommodation();
-  const [name,             setName]      = useState(acc.name);
-  const [location,         setLocation]  = useState(acc.location);
-  const [shortDescription, setShortDesc] = useState(acc.shortDescription);
-  const [description,      setDesc]      = useState(acc.description);
-  const [notice,           setNotice]    = useState(acc.notice ?? '');
-  const [maxGuests,        setMaxGuests] = useState(String(acc.maxGuests));
-  const [bedrooms,         setBedrooms]  = useState(String(acc.bedrooms));
-  const [bathrooms,        setBathrooms] = useState(String(acc.bathrooms));
-  const [kakaoId,          setKakaoId]   = useState(acc.kakaoId);
-  const [amenities,        setAmenities] = useState(acc.amenities.join(', '));
+  const [name,             setName]      = useState('');
+  const [location,         setLocation]  = useState('');
+  const [shortDescription, setShortDesc] = useState('');
+  const [description,      setDesc]      = useState('');
+  const [notice,           setNotice]    = useState('');
+  const [maxGuests,        setMaxGuests] = useState('4');
+  const [bedrooms,         setBedrooms]  = useState('2');
+  const [bathrooms,        setBathrooms] = useState('1');
+  const [kakaoId,          setKakaoId]   = useState('');
+  const [amenities,        setAmenities] = useState('');
   const [loading,          setLoading]   = useState(true);
   const [saving,           setSaving]    = useState(false);
 
-  // ── 화면 진입 시 Supabase에서 최신 데이터를 불러와 폼을 채움 ──────────────
-  // 이 부분이 없으면 새로고침 후 mockData 기본값만 보임
+  // ── 화면 진입 시 Supabase에서 직접 fetch ──────────────────────────────────
   useFocusEffect(useCallback(() => {
-    setLoading(true);
-    syncAccommodation()
-      .then((fresh) => {
-        setName(fresh.name);
-        setLocation(fresh.location);
-        setShortDesc(fresh.shortDescription);
-        setDesc(fresh.description);
-        setNotice(fresh.notice ?? '');
-        setMaxGuests(String(fresh.maxGuests));
-        setBedrooms(String(fresh.bedrooms));
-        setBathrooms(String(fresh.bathrooms));
-        setKakaoId(fresh.kakaoId);
-        setAmenities(fresh.amenities.join(', '));
-        console.log('[AdminEditInfo] 폼 로드 완료:', fresh.name);
-      })
-      .catch((err) => {
-        console.error('[AdminEditInfo] 폼 로드 실패:', err);
-        Alert.alert('로드 실패', 'Supabase 연결을 확인해주세요.\n' + (err?.message ?? ''));
-      })
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      console.log('[AdminEditInfo] Supabase fetch 시작...');
+
+      const { data, error } = await supabase
+        .from('accommodation')
+        .select('*')
+        .eq('id', HOUSE_ID)
+        .single();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[AdminEditInfo] fetch 실패:', error.code, error.message);
+        Alert.alert(
+          '❌ 데이터 로드 실패',
+          `코드: ${error.code}\n메시지: ${error.message}\n\nsupabase.ts의 URL/Key를 확인해주세요.`
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        Alert.alert('⚠️ 데이터 없음', 'accommodation 테이블에 행이 없습니다. SQL 초기 insert를 실행해주세요.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('[AdminEditInfo] fetch 성공 ✅:', data.name);
+
+      // 폼 채우기
+      setName(data.name ?? '');
+      setLocation(data.location ?? '');
+      setShortDesc(data.short_description ?? '');
+      setDesc(data.description ?? '');
+      setNotice(data.notice ?? '');
+      setMaxGuests(String(data.max_guests ?? 4));
+      setBedrooms(String(data.bedrooms ?? 2));
+      setBathrooms(String(data.bathrooms ?? 1));
+      setKakaoId(data.kakao_id ?? '');
+      setAmenities((data.amenities ?? []).join(', '));
+      setLoading(false);
+    })();
+
+    return () => { cancelled = true; };
   }, []));
 
-  // ── 저장 ──────────────────────────────────────────────────────────────────
+  // ── 저장: Supabase upsert → 검증 SELECT → alert ───────────────────────────
   const save = async () => {
     const guestsNum = parseInt(maxGuests, 10);
-    const bedsNum   = parseInt(bedrooms, 10);
+    const bedsNum   = parseInt(bedrooms,  10);
     const bathsNum  = parseInt(bathrooms, 10);
 
-    if (!name.trim()) {
-      Alert.alert('오류', '숙소 이름을 입력해주세요.');
-      return;
-    }
-    if (isNaN(guestsNum) || guestsNum < 1) {
-      Alert.alert('오류', '최대 인원을 올바르게 입력해주세요.');
-      return;
-    }
+    if (!name.trim()) { Alert.alert('오류', '숙소 이름을 입력해주세요.'); return; }
+    if (isNaN(guestsNum) || guestsNum < 1) { Alert.alert('오류', '최대 인원을 올바르게 입력해주세요.'); return; }
 
     setSaving(true);
-    try {
-      await saveAccommodation({
-        name:             name.trim(),
-        location:         location.trim(),
-        shortDescription: shortDescription.trim(),
-        description:      description.trim(),
-        notice:           notice.trim(),
-        pricePerNight:    0,
-        maxGuests:        guestsNum,
-        bedrooms:         isNaN(bedsNum)  ? acc.bedrooms  : bedsNum,
-        bathrooms:        isNaN(bathsNum) ? acc.bathrooms : bathsNum,
-        kakaoId:          kakaoId.trim(),
-        amenities:        amenities.split(',').map((a) => a.trim()).filter(Boolean),
-      });
 
-      Alert.alert('저장 완료 ✅', 'Supabase에 저장되었습니다.\n새로고침해도 데이터가 유지됩니다.', [
-        { text: '확인', onPress: () => navigation.goBack() },
-      ]);
-    } catch (err: any) {
-      console.error('[AdminEditInfo] 저장 실패:', err);
-      Alert.alert(
-        '저장 실패 ❌',
-        `오류: ${err?.message ?? '알 수 없는 오류'}\n\nSupabase RLS 정책 또는 URL/Key를 확인해주세요.`
-      );
-    } finally {
+    const payload = {
+      id:                HOUSE_ID,
+      name:              name.trim(),
+      location:          location.trim(),
+      short_description: shortDescription.trim(),
+      description:       description.trim(),
+      notice:            notice.trim(),
+      price_per_night:   0,
+      max_guests:        guestsNum,
+      bedrooms:          isNaN(bedsNum)  ? 2 : bedsNum,
+      bathrooms:         isNaN(bathsNum) ? 1 : bathsNum,
+      kakao_id:          kakaoId.trim(),
+      amenities:         amenities.split(',').map((a) => a.trim()).filter(Boolean),
+      updated_at:        new Date().toISOString(),
+    };
+
+    console.log('[AdminEditInfo] upsert 시작:', JSON.stringify(payload));
+
+    // ① upsert
+    const { error: upsertError } = await supabase
+      .from('accommodation')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (upsertError) {
       setSaving(false);
+      console.error('[AdminEditInfo] upsert 실패:', upsertError.code, upsertError.message);
+      Alert.alert(
+        '❌ 저장 실패',
+        `코드: ${upsertError.code}\n메시지: ${upsertError.message}\n\n` +
+        'Supabase RLS 정책 또는 URL/Key를 확인해주세요.'
+      );
+      return;
     }
+
+    // ② 저장 직후 검증 SELECT
+    const { data: verified, error: verifyError } = await supabase
+      .from('accommodation')
+      .select('name, description, notice, updated_at')
+      .eq('id', HOUSE_ID)
+      .single();
+
+    setSaving(false);
+
+    if (verifyError) {
+      console.error('[AdminEditInfo] 검증 fetch 실패:', verifyError.message);
+      Alert.alert('⚠️ upsert는 됐지만 검증 실패', verifyError.message);
+      return;
+    }
+
+    console.log('[AdminEditInfo] 저장 검증 ✅ DB 최신값:', JSON.stringify(verified));
+
+    // ③ in-memory도 동기화 (손님 화면 즉시 반영)
+    updateAccommodation({
+      name:             payload.name,
+      location:         payload.location,
+      shortDescription: payload.short_description,
+      description:      payload.description,
+      notice:           payload.notice,
+      maxGuests:        payload.max_guests,
+      bedrooms:         payload.bedrooms,
+      bathrooms:        payload.bathrooms,
+      kakaoId:          payload.kakao_id,
+      amenities:        payload.amenities,
+    });
+
+    Alert.alert(
+      '✅ Supabase 저장 완료',
+      `DB에 저장된 이름: ${verified.name}\n수정일시: ${verified.updated_at}`,
+      [{ text: '확인', onPress: () => navigation.goBack() }]
+    );
   };
 
-  // ── 로딩 중 화면 ────────────────────────────────────────────────────────
+  // ── 로딩 중 ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
@@ -122,7 +177,6 @@ export function AdminEditInfoScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -173,7 +227,7 @@ export function AdminEditInfoScreen() {
             style={[styles.input, styles.multiline]}
             value={notice} onChangeText={setNotice}
             multiline numberOfLines={2}
-            placeholder="예: 7월 특가 진행 중! 카톡 문의 주세요 😊  (비워두면 배너 숨겨짐)"
+            placeholder="예: 7월 특가! (비워두면 배너 숨겨짐)"
             placeholderTextColor={colors.textMuted}
           />
         </Field>
@@ -182,29 +236,29 @@ export function AdminEditInfoScreen() {
           <View style={{ flex: 1 }}>
             <Field label="최대 인원">
               <TextInput style={styles.input} value={maxGuests} onChangeText={setMaxGuests}
-                keyboardType="number-pad" placeholder="4" placeholderTextColor={colors.textMuted} />
+                keyboardType="number-pad" placeholderTextColor={colors.textMuted} />
             </Field>
           </View>
           <View style={{ width: spacing.sm }} />
           <View style={{ flex: 1 }}>
             <Field label="침실 수">
               <TextInput style={styles.input} value={bedrooms} onChangeText={setBedrooms}
-                keyboardType="number-pad" placeholder="2" placeholderTextColor={colors.textMuted} />
+                keyboardType="number-pad" placeholderTextColor={colors.textMuted} />
             </Field>
           </View>
           <View style={{ width: spacing.sm }} />
           <View style={{ flex: 1 }}>
             <Field label="욕실 수">
               <TextInput style={styles.input} value={bathrooms} onChangeText={setBathrooms}
-                keyboardType="number-pad" placeholder="1" placeholderTextColor={colors.textMuted} />
+                keyboardType="number-pad" placeholderTextColor={colors.textMuted} />
             </Field>
           </View>
         </View>
 
         <Field label="카카오톡 채널 ID">
           <TextInput style={styles.input} value={kakaoId} onChangeText={setKakaoId}
-            placeholder="mamibalistay" placeholderTextColor={colors.textMuted}
-            autoCapitalize="none" autoCorrect={false} />
+            autoCapitalize="none" autoCorrect={false}
+            placeholderTextColor={colors.textMuted} />
         </Field>
 
         <Field label="편의시설 (쉼표로 구분)">
@@ -219,17 +273,17 @@ export function AdminEditInfoScreen() {
 
         <TouchableOpacity
           style={[styles.saveButton, saving && { opacity: 0.7 }]}
-          onPress={save}
-          disabled={saving}
+          onPress={save} disabled={saving}
         >
-          {saving ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color={colors.white} />
-              <Text style={styles.saveButtonText}>Supabase에 저장하기</Text>
-            </>
-          )}
+          {saving
+            ? <ActivityIndicator color={colors.white} />
+            : (
+              <>
+                <Ionicons name="checkmark-circle" size={20} color={colors.white} />
+                <Text style={styles.saveButtonText}>Supabase에 저장하기</Text>
+              </>
+            )
+          }
         </TouchableOpacity>
 
         <View style={{ height: spacing.xxl }} />
@@ -249,13 +303,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-
   loadingWrap: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.background, gap: spacing.md,
   },
   loadingText: { ...typography.bodySmall, color: colors.textMuted },
-
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingTop: 52, paddingBottom: spacing.md, paddingHorizontal: spacing.md,
@@ -265,11 +317,9 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', ...typography.h3, fontSize: 16 },
   saveBtn: {
     minWidth: 44, height: 32, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.terracotta, borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.terracotta, borderRadius: radius.sm, paddingHorizontal: spacing.sm,
   },
   saveBtnText: { color: colors.white, fontWeight: '700', fontSize: 13 },
-
   content: { padding: spacing.md },
   field: { marginBottom: spacing.md },
   fieldLabel: {
@@ -285,7 +335,6 @@ const styles = StyleSheet.create({
   },
   multiline: { minHeight: 80, paddingTop: 12, textAlignVertical: 'top' },
   row: { flexDirection: 'row', marginBottom: spacing.md },
-
   saveButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, backgroundColor: colors.terracotta,
