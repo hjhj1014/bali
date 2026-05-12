@@ -1,5 +1,5 @@
 [build]
-  command   = "npx expo export --platform web && mkdir -p dist/images && cp public/images/bali1.jpg dist/images/bali1.jpg && cp public/images/bali2.jpg dist/images/bali2.jpg && cp public/images/bali3.jpg dist/images/bali3.jpg && cp public/images/bali4.jpg dist/images/bali4.jpg && cp public/images/bali5.jpg dist/images/bali5.jpg"
+  command   = "npx expo export --platform web "
   publish   = "dist"
 
 [[redirects]]
