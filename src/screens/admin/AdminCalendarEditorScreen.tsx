@@ -12,9 +12,9 @@ import { CalendarStatus } from '../../types';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 
 // ─── 달력 크기 계산 ──────────────────────────────────────────────────────────
-const WIN_W   = Math.min(Dimensions.get('window').width, 430);
-const H_PAD   = spacing.md * 2;          // 좌우 패딩
-const CELL_GAP = 4;                       // 셀 간격
+const WIN_W    = Math.min(Dimensions.get('window').width, 430);
+const H_PAD    = spacing.md * 2;
+const CELL_GAP = 4;
 const DAY_SIZE = Math.floor((WIN_W - H_PAD - CELL_GAP * 6) / 7);
 
 const STATUS_OPTIONS: { value: CalendarStatus; label: string; color: string }[] = [
@@ -37,23 +37,17 @@ function firstDayOfMonth(y: number, m: number) { return new Date(y, m, 1).getDay
 
 export function AdminCalendarEditorScreen() {
   const navigation = useNavigation();
-  const acc        = getAccommodation();  // 헤더 숙소명 표시용
+  const acc        = getAccommodation();
   const today      = new Date();
 
-  // ─── 상태 ─────────────────────────────────────────────────────────────────
   const [year,    setYear]   = useState(today.getFullYear());
   const [month,   setMonth]  = useState(today.getMonth());
 
-  // 선택한 상태 버튼
   const [selectedStatus, setSelectedStatus] = useState<CalendarStatus>('booked');
-
-  // 선택한 날짜 범위
   const [rangeStart, setRangeStart] = useState<string | null>(null);
   const [rangeEnd,   setRangeEnd]   = useState<string | null>(null);
 
-  // Supabase에서 받은 날짜→상태 맵
   const [dateMap, setDateMap] = useState<Record<string, CalendarStatus>>({});
-
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
 
@@ -85,7 +79,6 @@ export function AdminCalendarEditorScreen() {
     return () => { cancelled = true; };
   }, []));
 
-  // ── 월 이동 ──────────────────────────────────────────────────────────────
   const prevMonth = () => {
     if (month === 0) { setMonth(11); setYear(y => y - 1); }
     else setMonth(m => m - 1);
@@ -95,17 +88,14 @@ export function AdminCalendarEditorScreen() {
     else setMonth(m => m + 1);
   };
 
-  // ── 날짜 클릭 ─────────────────────────────────────────────────────────────
   const handleDayPress = (day: number) => {
     const d = toDateStr(year, month, day);
     console.log('날짜 선택:', d);
 
     if (!rangeStart || (rangeStart && rangeEnd)) {
-      // 첫 번째 클릭 → 시작일 설정
       setRangeStart(d);
       setRangeEnd(null);
     } else {
-      // 두 번째 클릭 → 종료일 설정 (순서 정렬)
       if (d < rangeStart) {
         setRangeEnd(rangeStart);
         setRangeStart(d);
@@ -115,13 +105,11 @@ export function AdminCalendarEditorScreen() {
     }
   };
 
-  // ── 상태 버튼 클릭 ────────────────────────────────────────────────────────
   const handleStatusPress = (s: CalendarStatus) => {
     console.log('상태 변경:', s);
     setSelectedStatus(s);
   };
 
-  // ── 날짜가 선택 범위 안에 있는지 ─────────────────────────────────────────
   const isInRange = (dateStr: string): boolean => {
     if (!rangeStart) return false;
     const lo = rangeStart < (rangeEnd ?? rangeStart) ? rangeStart : (rangeEnd ?? rangeStart);
@@ -129,75 +117,66 @@ export function AdminCalendarEditorScreen() {
     return dateStr > lo && dateStr < hi;
   };
 
-  // ── Supabase upsert ────────────────────────────────────────────────────────
-  const applyStatus = () => {
+  // ── 달력 저장 ─────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    console.log('달력 저장 버튼 클릭');
+
     if (!rangeStart) {
       Alert.alert('날짜를 선택해주세요', '달력에서 시작 날짜를 먼저 선택하세요.');
       return;
     }
+
     const start = rangeStart;
     const end   = rangeEnd ?? rangeStart;
     const label = STATUS_OPTIONS.find(s => s.value === selectedStatus)?.label ?? '';
 
-    Alert.alert(
-      '상태 변경 확인',
-      `${start} ~ ${end}\n상태: ${label}\n\n변경하시겠습니까?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '변경',
-          onPress: async () => {
-            setSaving(true);
+    setSaving(true);
 
-            // upsert할 행 목록
-            const rows: { date: string; status: string; updated_at: string }[] = [];
-            const cur = new Date(start);
-            const fin = new Date(end);
-            while (cur <= fin) {
-              rows.push({
-                date:       cur.toISOString().split('T')[0],
-                status:     selectedStatus,
-                updated_at: new Date().toISOString(),
-              });
-              cur.setDate(cur.getDate() + 1);
-            }
+    // upsert할 행 목록
+    const rows: { date: string; status: string; updated_at: string }[] = [];
+    const cur = new Date(start);
+    const fin = new Date(end);
+    while (cur <= fin) {
+      rows.push({
+        date:       cur.toISOString().split('T')[0],
+        status:     selectedStatus,
+        updated_at: new Date().toISOString(),
+      });
+      cur.setDate(cur.getDate() + 1);
+    }
 
-            console.log('[AdminCalendar] upsert 시작:', rows.length, '개 행');
+    console.log('[AdminCalendar] upsert 시작:', rows.length, '개 행');
 
-            const { error } = await supabase
-              .from('calendar_dates')
-              .upsert(rows, { onConflict: 'date' });
+    const { error } = await supabase
+      .from('calendar_dates')
+      .upsert(rows, { onConflict: 'date' });
 
-            if (error) {
-              setSaving(false);
-              console.error('[AdminCalendar] upsert 실패:', error.message);
-              Alert.alert('달력 저장 실패', error.message);
-              return;
-            }
+    if (error) {
+      setSaving(false);
+      console.error('[AdminCalendar] upsert 실패:', error.message);
+      Alert.alert('달력 저장 실패', error.message);
+      return;
+    }
 
-            // 저장 직후 검증 SELECT
-            const { data: verified } = await supabase
-              .from('calendar_dates')
-              .select('date, status')
-              .in('date', rows.map(r => r.date));
+    // 검증 SELECT
+    const { data: verified } = await supabase
+      .from('calendar_dates')
+      .select('date, status')
+      .in('date', rows.map(r => r.date));
 
-            console.log('[AdminCalendar] 저장 완료 ✅ DB 검증:', JSON.stringify(verified));
+    console.log('[AdminCalendar] 저장 완료 ✅ DB 검증:', JSON.stringify(verified));
 
-            // 로컬 state 즉시 갱신
-            setDateMap(prev => {
-              const next = { ...prev };
-              rows.forEach(r => { next[r.date] = selectedStatus; });
-              return next;
-            });
-            setRangeStart(null);
-            setRangeEnd(null);
-            setSaving(false);
+    // 로컬 state 즉시 갱신
+    setDateMap(prev => {
+      const next = { ...prev };
+      rows.forEach(r => { next[r.date] = selectedStatus; });
+      return next;
+    });
+    setRangeStart(null);
+    setRangeEnd(null);
+    setSaving(false);
 
-            Alert.alert('달력 저장 완료', `${rows.length}개 날짜 → ${label}`);
-          },
-        },
-      ]
-    );
+    Alert.alert('달력 저장 완료', `${rows.length}개 날짜 → ${label}`);
   };
 
   // ── 렌더 ──────────────────────────────────────────────────────────────────
@@ -227,11 +206,13 @@ export function AdminCalendarEditorScreen() {
         <View style={{ width: 36 }} />
       </View>
 
+      {/* 스크롤 영역 */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
-        {/* ── 상태 선택 버튼 ── */}
+        {/* ① 상태 선택 */}
         <View style={styles.statusSection}>
           <Text style={styles.sectionLabel}>① 적용할 상태 선택</Text>
           <View style={styles.statusRow}>
@@ -249,10 +230,7 @@ export function AdminCalendarEditorScreen() {
                   onPress={() => handleStatusPress(s.value)}
                 >
                   <View style={[styles.dot, { backgroundColor: isSelected ? '#fff' : s.color }]} />
-                  <Text style={[
-                    styles.chipText,
-                    { color: isSelected ? '#fff' : s.color },
-                  ]}>
+                  <Text style={[styles.chipText, { color: isSelected ? '#fff' : s.color }]}>
                     {s.label}
                   </Text>
                 </TouchableOpacity>
@@ -261,7 +239,7 @@ export function AdminCalendarEditorScreen() {
           </View>
         </View>
 
-        {/* ── 선택 범위 표시 ── */}
+        {/* ② 날짜 범위 표시 */}
         <View style={styles.rangeBox}>
           <Text style={styles.sectionLabel}>② 날짜 범위 선택</Text>
           <View style={styles.rangeRow}>
@@ -279,7 +257,7 @@ export function AdminCalendarEditorScreen() {
           </View>
         </View>
 
-        {/* ── 월 네비게이션 ── */}
+        {/* 월 네비게이션 */}
         <View style={styles.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={styles.navBtn} activeOpacity={0.7}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -290,22 +268,18 @@ export function AdminCalendarEditorScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── 요일 헤더 ── */}
+        {/* 요일 헤더 */}
         <View style={styles.weekRow}>
           {WEEKDAYS.map(d => (
             <Text key={d} style={styles.weekday}>{d}</Text>
           ))}
         </View>
 
-        {/* ── 달력 그리드 ── */}
-        {/* gap 대신 margin을 각 셀에 직접 적용 — 웹 호환성 개선 */}
+        {/* 달력 그리드 — gap 대신 margin 적용 (웹 호환) */}
         <View style={styles.grid}>
-          {/* 빈 셀 (월 첫날 요일 offset) */}
           {Array.from({ length: offset }).map((_, i) => (
             <View key={`e${i}`} style={styles.cell} />
           ))}
-
-          {/* 날짜 셀 */}
           {Array.from({ length: days }).map((_, i) => {
             const day     = i + 1;
             const dateStr = toDateStr(year, month, day);
@@ -314,7 +288,6 @@ export function AdminCalendarEditorScreen() {
             const isEnd   = dateStr === rangeEnd;
             const inRange = isInRange(dateStr);
 
-            // 셀 배경색 결정
             let cellBg = 'transparent';
             if (isStart || isEnd) cellBg = colors.terracotta;
             else if (inRange)     cellBg = colors.terracotta + '30';
@@ -332,7 +305,6 @@ export function AdminCalendarEditorScreen() {
                 ]}>
                   {day}
                 </Text>
-                {/* 상태 점 */}
                 {status && (
                   <View style={[
                     styles.statusDot,
@@ -344,21 +316,7 @@ export function AdminCalendarEditorScreen() {
           })}
         </View>
 
-        {/* ── 적용 버튼 ── */}
-        <TouchableOpacity
-          style={[styles.applyBtn, saving && { opacity: 0.6 }]}
-          onPress={applyStatus}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.applyBtnText}>✅ 선택 범위에 상태 적용</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* ── 선택 초기화 ── */}
+        {/* 선택 초기화 */}
         <TouchableOpacity
           style={styles.resetBtn}
           onPress={() => { setRangeStart(null); setRangeEnd(null); }}
@@ -366,9 +324,23 @@ export function AdminCalendarEditorScreen() {
         >
           <Text style={styles.resetBtnText}>선택 초기화</Text>
         </TouchableOpacity>
-
-        <View style={{ height: 60 }} />
       </ScrollView>
+
+      {/* ── 하단 고정 저장 버튼 ── */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+          onPress={handleSave}
+          disabled={saving}
+          activeOpacity={0.8}
+        >
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.saveBtnText}>달력 저장</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -442,7 +414,6 @@ const styles = StyleSheet.create({
     fontSize: 11, fontWeight: '600', color: colors.textMuted,
   },
 
-  // gap 대신 각 셀에 margin 적용 (웹 호환)
   grid: {
     flexDirection: 'row', flexWrap: 'wrap',
     paddingHorizontal: spacing.md,
@@ -459,14 +430,23 @@ const styles = StyleSheet.create({
   dayNum:    { fontSize: 13, fontWeight: '500', color: colors.text },
   statusDot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
 
-  applyBtn: {
-    margin: spacing.md, marginTop: spacing.lg,
+  resetBtn:     { alignItems: 'center', paddingVertical: spacing.sm, marginBottom: spacing.md },
+  resetBtnText: { color: colors.textMuted, fontSize: 13 },
+
+  // 하단 고정 저장 버튼
+  footer: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    paddingBottom: 28,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  saveBtn: {
     backgroundColor: colors.terracotta,
-    paddingVertical: 16, borderRadius: radius.md,
+    paddingVertical: 16,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
-  applyBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-
-  resetBtn:     { alignItems: 'center', paddingVertical: spacing.sm },
-  resetBtnText: { color: colors.textMuted, fontSize: 13 },
+  saveBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
