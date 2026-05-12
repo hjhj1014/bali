@@ -200,7 +200,7 @@ export function AdminCalendarEditorScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* 달력 저장 버튼 */}
+        {/* 상단 저장 버튼 */}
         <View style={styles.saveBtnWrap}>
           <TouchableOpacity
             style={[styles.saveBtn, saving && { opacity: 0.6 }]}
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { ...typography.bodySmall, color: colors.textMuted },
 
-  // 상단 고정 영역 (헤더 + 저장 버튼)
+  // 상단 고정 영역 (헤더)
   topFixed: {
     backgroundColor: colors.background,
     borderBottomWidth: 1,
@@ -368,10 +368,6 @@ const styles = StyleSheet.create({
   headerTitle:  { ...typography.h3, fontSize: 16 },
   headerSub:    { ...typography.caption, color: colors.terracotta, marginTop: 1 },
 
-  saveBtnWrap: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
-  },
   saveBtn: {
     backgroundColor: colors.terracotta,
     paddingVertical: 18,
