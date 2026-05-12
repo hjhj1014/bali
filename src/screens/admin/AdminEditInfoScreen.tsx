@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,34 +12,70 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
 import { getAccommodation } from '../../data/store';
-import { saveAccommodation } from '../../data/supabaseStore';
+import { syncAccommodation, saveAccommodation } from '../../data/supabaseStore';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 
 export function AdminEditInfoScreen() {
   const navigation = useNavigation();
+
+  // 폼 상태 — 초기값은 in-memory(앱 기동 직후 mockData)
+  // useFocusEffect에서 Supabase 최신값으로 덮어씀
   const acc = getAccommodation();
-
-  const [name, setName]                  = useState(acc.name);
-  const [location, setLocation]          = useState(acc.location);
+  const [name,             setName]      = useState(acc.name);
+  const [location,         setLocation]  = useState(acc.location);
   const [shortDescription, setShortDesc] = useState(acc.shortDescription);
-  const [description, setDescription]    = useState(acc.description);
-  const [notice, setNotice]              = useState(acc.notice ?? '');
-  const [maxGuests, setMaxGuests]        = useState(String(acc.maxGuests));
-  const [bedrooms, setBedrooms]          = useState(String(acc.bedrooms));
-  const [bathrooms, setBathrooms]        = useState(String(acc.bathrooms));
-  const [kakaoId, setKakaoId]            = useState(acc.kakaoId);
-  const [amenities, setAmenities]        = useState(acc.amenities.join(', '));
-  const [saving, setSaving]              = useState(false);
+  const [description,      setDesc]      = useState(acc.description);
+  const [notice,           setNotice]    = useState(acc.notice ?? '');
+  const [maxGuests,        setMaxGuests] = useState(String(acc.maxGuests));
+  const [bedrooms,         setBedrooms]  = useState(String(acc.bedrooms));
+  const [bathrooms,        setBathrooms] = useState(String(acc.bathrooms));
+  const [kakaoId,          setKakaoId]   = useState(acc.kakaoId);
+  const [amenities,        setAmenities] = useState(acc.amenities.join(', '));
+  const [loading,          setLoading]   = useState(true);
+  const [saving,           setSaving]    = useState(false);
 
+  // ── 화면 진입 시 Supabase에서 최신 데이터를 불러와 폼을 채움 ──────────────
+  // 이 부분이 없으면 새로고침 후 mockData 기본값만 보임
+  useFocusEffect(useCallback(() => {
+    setLoading(true);
+    syncAccommodation()
+      .then((fresh) => {
+        setName(fresh.name);
+        setLocation(fresh.location);
+        setShortDesc(fresh.shortDescription);
+        setDesc(fresh.description);
+        setNotice(fresh.notice ?? '');
+        setMaxGuests(String(fresh.maxGuests));
+        setBedrooms(String(fresh.bedrooms));
+        setBathrooms(String(fresh.bathrooms));
+        setKakaoId(fresh.kakaoId);
+        setAmenities(fresh.amenities.join(', '));
+        console.log('[AdminEditInfo] 폼 로드 완료:', fresh.name);
+      })
+      .catch((err) => {
+        console.error('[AdminEditInfo] 폼 로드 실패:', err);
+        Alert.alert('로드 실패', 'Supabase 연결을 확인해주세요.\n' + (err?.message ?? ''));
+      })
+      .finally(() => setLoading(false));
+  }, []));
+
+  // ── 저장 ──────────────────────────────────────────────────────────────────
   const save = async () => {
     const guestsNum = parseInt(maxGuests, 10);
     const bedsNum   = parseInt(bedrooms, 10);
     const bathsNum  = parseInt(bathrooms, 10);
 
-    if (!name.trim()) { Alert.alert('오류', '숙소 이름을 입력해주세요.'); return; }
-    if (isNaN(guestsNum) || guestsNum < 1) { Alert.alert('오류', '최대 인원을 올바르게 입력해주세요.'); return; }
+    if (!name.trim()) {
+      Alert.alert('오류', '숙소 이름을 입력해주세요.');
+      return;
+    }
+    if (isNaN(guestsNum) || guestsNum < 1) {
+      Alert.alert('오류', '최대 인원을 올바르게 입력해주세요.');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -54,17 +90,32 @@ export function AdminEditInfoScreen() {
         bedrooms:         isNaN(bedsNum)  ? acc.bedrooms  : bedsNum,
         bathrooms:        isNaN(bathsNum) ? acc.bathrooms : bathsNum,
         kakaoId:          kakaoId.trim(),
-        amenities:        amenities.split(',').map(a => a.trim()).filter(Boolean),
+        amenities:        amenities.split(',').map((a) => a.trim()).filter(Boolean),
       });
-      Alert.alert('저장 완료', 'Supabase에 저장되었습니다.\n새로고침해도 데이터가 유지됩니다.', [
+
+      Alert.alert('저장 완료 ✅', 'Supabase에 저장되었습니다.\n새로고침해도 데이터가 유지됩니다.', [
         { text: '확인', onPress: () => navigation.goBack() },
       ]);
     } catch (err: any) {
-      Alert.alert('저장 실패', `오류: ${err?.message ?? '알 수 없는 오류'}\nSupabase URL/Key를 확인해주세요.`);
+      console.error('[AdminEditInfo] 저장 실패:', err);
+      Alert.alert(
+        '저장 실패 ❌',
+        `오류: ${err?.message ?? '알 수 없는 오류'}\n\nSupabase RLS 정책 또는 URL/Key를 확인해주세요.`
+      );
     } finally {
       setSaving(false);
     }
   };
+
+  // ── 로딩 중 화면 ────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="large" color={colors.terracotta} />
+        <Text style={styles.loadingText}>Supabase에서 불러오는 중...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -78,11 +129,10 @@ export function AdminEditInfoScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>숙소 정보 편집</Text>
         <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator size="small" color={colors.white} />
-          ) : (
-            <Text style={styles.saveBtnText}>저장</Text>
-          )}
+          {saving
+            ? <ActivityIndicator size="small" color={colors.white} />
+            : <Text style={styles.saveBtnText}>저장</Text>
+          }
         </TouchableOpacity>
       </View>
 
@@ -111,14 +161,13 @@ export function AdminEditInfoScreen() {
         <Field label="상세 설명">
           <TextInput
             style={[styles.input, styles.multiline]}
-            value={description} onChangeText={setDescription}
+            value={description} onChangeText={setDesc}
             multiline numberOfLines={5}
             placeholder="숙소에 대한 자세한 설명..."
             placeholderTextColor={colors.textMuted}
           />
         </Field>
 
-        {/* 안내 문구 — 손님 화면 홈 상단에 배너로 표시됨 */}
         <Field label="📢 안내 문구 (홈 화면 배너)">
           <TextInput
             style={[styles.input, styles.multiline]}
@@ -200,6 +249,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+
+  loadingWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.background, gap: spacing.md,
+  },
+  loadingText: { ...typography.bodySmall, color: colors.textMuted },
+
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingTop: 52, paddingBottom: spacing.md, paddingHorizontal: spacing.md,
