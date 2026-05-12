@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
 import { getAccommodation } from '../../data/store';
+import { syncAccommodation } from '../../data/supabaseStore';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 import { RootStackParamList } from '../../types';
 import { openKakaoChat } from '../../utils/kakao';
@@ -21,7 +22,10 @@ export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const [acc, setAcc] = useState(getAccommodation());
 
-  useFocusEffect(useCallback(() => { setAcc(getAccommodation()); }, []));
+  useFocusEffect(useCallback(() => {
+    // Supabase에서 최신 데이터를 불러와 화면 갱신
+    syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
+  }, []));
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -43,6 +47,13 @@ export function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ── 안내 문구 배너 (관리자가 설정한 경우만 표시) ── */}
+      {!!acc.notice && (
+        <View style={styles.noticeBanner}>
+          <Text style={styles.noticeText}>📢 {acc.notice}</Text>
+        </View>
+      )}
 
       {/* ── Quick facts ── */}
       <View style={styles.factsCard}>
@@ -169,6 +180,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12, borderRadius: radius.full,
   },
   kakaoBtnText: { color: '#3A1D1D', fontWeight: '700', fontSize: 15 },
+  noticeBanner: {
+    margin: spacing.md,
+    marginBottom: 0,
+    backgroundColor: colors.terracotta + '18',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.terracotta,
+  },
+  noticeText: {
+    fontSize: 13,
+    color: colors.terracotta,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
   adminBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 4, alignSelf: 'center', marginTop: spacing.lg,

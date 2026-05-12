@@ -7,10 +7,12 @@ import {
   StyleSheet,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
-import { getAccommodation, getCalendar, updateDateRangeStatus } from '../../data/store';
+import { getAccommodation, getCalendar } from '../../data/store';
+import { saveDateRange, syncCalendar } from '../../data/supabaseStore';
 import { CalendarStatus } from '../../types';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 
@@ -51,7 +53,8 @@ export function AdminCalendarEditorScreen() {
   const [selectedStatus, setSelectedStatus] = useState<CalendarStatus>('booked');
   const [rangeStart, setRangeStart]       = useState<string | null>(null);
   const [rangeEnd, setRangeEnd]           = useState<string | null>(null);
-  const [tick, setTick]                   = useState(0); // force re-render after update
+  const [tick, setTick]   = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const calendarData = getCalendar();
 
@@ -108,12 +111,19 @@ export function AdminCalendarEditorScreen() {
         { text: '취소', style: 'cancel' },
         {
           text: '변경',
-          onPress: () => {
-            updateDateRangeStatus(start, end, selectedStatus);
-            setRangeStart(null);
-            setRangeEnd(null);
-            setTick(n => n + 1);
-            Alert.alert('완료', '상태가 변경되었습니다.');
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await saveDateRange(start, end, selectedStatus);
+              setRangeStart(null);
+              setRangeEnd(null);
+              setTick(n => n + 1);
+              Alert.alert('저장 완료', 'Supabase에 저장되었습니다.');
+            } catch (err: any) {
+              Alert.alert('저장 실패', `오류: ${err?.message ?? '알 수 없는 오류'}`);
+            } finally {
+              setSaving(false);
+            }
           },
         },
       ]
@@ -221,9 +231,19 @@ export function AdminCalendarEditorScreen() {
         </View>
 
         {/* Apply */}
-        <TouchableOpacity style={styles.applyButton} onPress={applyStatus}>
-          <Ionicons name="checkmark-circle" size={20} color={colors.white} />
-          <Text style={styles.applyButtonText}>선택 범위에 상태 적용</Text>
+        <TouchableOpacity
+          style={[styles.applyButton, saving && { opacity: 0.7 }]}
+          onPress={applyStatus}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <>
+              <Ionicons name="checkmark-circle" size={20} color={colors.white} />
+              <Text style={styles.applyButtonText}>선택 범위에 상태 적용</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity

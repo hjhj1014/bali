@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
 import { getAccommodation } from '../../data/store';
+import { syncAccommodation } from '../../data/supabaseStore';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 import { RootStackParamList } from '../../types';
 import { openKakaoChat } from '../../utils/kakao';
@@ -23,7 +24,7 @@ export function StayDetailScreen() {
   const [photoIndex, setPhotoIndex] = useState(0);
 
   useFocusEffect(useCallback(() => {
-    setAcc(getAccommodation());
+    syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
     setPhotoIndex(0);
   }, []));
 

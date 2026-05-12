@@ -26,6 +26,7 @@ export const initialAccommodation: Accommodation = {
   name: 'Bali Cozy House',
   location: 'Sanur, Bali',
   shortDescription: '발리 Sanur의 조용한 주택가에 자리한 아늑한 패밀리 하우스',
+  notice: '',  // 관리자 화면에서 입력 — 손님 화면 상단에 표시됨
   description:
     'Bali Cozy House는 발리 Sanur의 한적한 골목길에 위치한 따뜻한 가족 숙소입니다.\n\n' +
     '넓은 정원과 개인 수영장을 갖추고 있어 아이들이 안전하게 뛰어놀 수 있으며, ' +

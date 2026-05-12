@@ -11,6 +11,7 @@ export interface Accommodation {
   location: string;
   shortDescription: string;
   description: string;
+  notice: string;           // 관리자가 설정하는 안내 문구 (예: "7월 특가 진행 중")
   photos: (string | number)[];  // string = URL, number = require() asset
   pricePerNight: number;   // 0 = 문의 가격
   maxGuests: number;

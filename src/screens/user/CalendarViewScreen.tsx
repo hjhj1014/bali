@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
 import { getAccommodation, getCalendar } from '../../data/store';
+import { syncAccommodation, syncCalendar } from '../../data/supabaseStore';
 import { CalendarLegend } from '../../components/CalendarLegend';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, spacing, radius, typography } from '../../constants/theme';
@@ -42,8 +43,8 @@ export function CalendarViewScreen() {
   const [selected, setSel]  = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
-    setAcc(getAccommodation());
-    setCal(getCalendar());
+    syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
+    syncCalendar().then(setCal).catch(() => setCal(getCalendar()));
   }, []));
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
