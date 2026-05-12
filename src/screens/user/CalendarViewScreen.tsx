@@ -5,8 +5,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
-import { getAccommodation, getCalendar } from '../../data/store';
-import { syncAccommodation, syncCalendar } from '../../data/supabaseStore';
+import { supabase } from '../../lib/supabase';           // ← 직접 호출
+import { getAccommodation } from '../../data/store';     // 숙소명 표시용만
 import { CalendarLegend } from '../../components/CalendarLegend';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, spacing, radius, typography } from '../../constants/theme';
@@ -31,41 +31,74 @@ function fmt(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad
 function daysIn(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
 function firstDay(y: number, m: number) { return new Date(y, m, 1).getDay(); }
 
+const HINT: Record<CalendarStatus, string> = {
+  available:   '예약 가능한 날짜입니다. 카카오톡으로 문의해 주세요 😊',
+  pending:     '현재 상담 중인 날짜입니다. 카카오톡으로 먼저 연락해 주세요.',
+  booked:      '이미 예약이 완료된 날짜입니다.',
+  cancelled:   '취소 후 재오픈된 날짜입니다. 카카오톡으로 문의해 보세요.',
+  maintenance: '막혀 있는 날짜로 예약이 불가합니다.',
+};
+
 export function CalendarViewScreen() {
-  const navigation  = useNavigation();
-  const today       = new Date();
-  const todayStr    = today.toISOString().split('T')[0];
+  const navigation = useNavigation();
+  const today      = new Date();
+  const todayStr   = today.toISOString().split('T')[0];
+  const acc        = getAccommodation(); // 숙소명 헤더 표시용
 
-  const [acc, setAcc]       = useState(getAccommodation());
-  const [calendar, setCal]  = useState(getCalendar());
-  const [year, setYear]     = useState(today.getFullYear());
-  const [month, setMonth]   = useState(today.getMonth());
-  const [selected, setSel]  = useState<string | null>(null);
+  const [year,     setYear]   = useState(today.getFullYear());
+  const [month,    setMonth]  = useState(today.getMonth());
+  const [selected, setSel]    = useState<string | null>(null);
 
+  // ─── Supabase에서 직접 받아온 날짜→상태 맵 ─────────────────────────────────
+  const [dates, setDates] = useState<Record<string, CalendarStatus>>({});
+
+  // ── 화면 진입 시 calendar_dates 테이블에서 fetch ───────────────────────────
   useFocusEffect(useCallback(() => {
-    syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
-    syncCalendar().then(setCal).catch(() => setCal(getCalendar()));
+    let cancelled = false;
+
+    (async () => {
+      console.log('[CalendarView] Supabase fetch 시작...');
+
+      const { data, error } = await supabase
+        .from('calendar_dates')
+        .select('date, status');
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[CalendarView] fetch 실패:', error.message);
+        return; // 실패해도 빈 달력으로 표시 (손님 화면이므로 alert 생략)
+      }
+
+      const map: Record<string, CalendarStatus> = {};
+      (data ?? []).forEach((row) => {
+        map[row.date] = row.status as CalendarStatus;
+      });
+
+      console.log('[CalendarView] fetch 성공 ✅', Object.keys(map).length, '개 날짜');
+      setDates(map);
+    })();
+
+    return () => { cancelled = true; };
   }, []));
 
-  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
-  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
+  const prevMonth = () => {
+    if (month === 0) { setMonth(11); setYear(y => y - 1); }
+    else setMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (month === 11) { setMonth(0); setYear(y => y + 1); }
+    else setMonth(m => m + 1);
+  };
 
   const days   = daysIn(year, month);
   const offset = firstDay(year, month);
 
-  const selectedStatus = selected ? calendar.dates[selected]?.status ?? null : null;
-
-  const HINT: Record<CalendarStatus, string> = {
-    available:   '예약 가능한 날짜입니다. 카카오톡으로 문의해 주세요 😊',
-    pending:     '현재 문의 중인 날짜입니다. 카카오톡으로 먼저 연락해 주세요.',
-    booked:      '이미 예약이 완료된 날짜입니다.',
-    cancelled:   '취소 후 재오픈된 날짜입니다. 카카오톡으로 문의해 보세요.',
-    maintenance: '점검 중인 날짜로 예약이 불가합니다.',
-  };
+  const selectedStatus = selected ? (dates[selected] ?? null) : null;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -78,7 +111,7 @@ export function CalendarViewScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Month nav */}
+        {/* 월 네비게이션 */}
         <View style={styles.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={styles.navBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -89,20 +122,31 @@ export function CalendarViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Weekdays */}
+        {/* 요일 헤더 */}
         <View style={styles.weekRow}>
           {WEEKDAYS.map((d, i) => (
-            <Text key={d} style={[styles.weekday, i === 0 && { color: '#E53935' }, i === 6 && { color: '#1E88E5' }]}>{d}</Text>
+            <Text
+              key={d}
+              style={[
+                styles.weekday,
+                i === 0 && { color: '#E53935' },
+                i === 6 && { color: '#1E88E5' },
+              ]}
+            >
+              {d}
+            </Text>
           ))}
         </View>
 
-        {/* Grid */}
+        {/* 달력 그리드 */}
         <View style={styles.grid}>
-          {Array.from({ length: offset }).map((_, i) => <View key={`e${i}`} style={styles.dayCell} />)}
+          {Array.from({ length: offset }).map((_, i) => (
+            <View key={`e${i}`} style={styles.dayCell} />
+          ))}
           {Array.from({ length: days }).map((_, i) => {
             const day     = i + 1;
             const dateStr = fmt(year, month, day);
-            const status  = calendar.dates[dateStr]?.status ?? null;
+            const status  = dates[dateStr] ?? null;   // ← Supabase 데이터 기준
             const isPast  = dateStr < todayStr;
             const isSel   = dateStr === selected;
             const isToday = dateStr === todayStr;
@@ -119,7 +163,11 @@ export function CalendarViewScreen() {
                   isToday && styles.dayToday,
                   status && !isPast && { backgroundColor: STATUS_COLOR[status] + '28' },
                 ]}>
-                  <Text style={[styles.dayText, isPast && styles.dayPast, isToday && styles.dayTodayText]}>
+                  <Text style={[
+                    styles.dayText,
+                    isPast && styles.dayPast,
+                    isToday && styles.dayTodayText,
+                  ]}>
                     {day}
                   </Text>
                   {status && !isPast && (
@@ -131,13 +179,13 @@ export function CalendarViewScreen() {
           })}
         </View>
 
-        {/* Legend */}
+        {/* 범례 */}
         <View style={styles.legendWrap}>
           <Text style={styles.legendTitle}>상태 안내</Text>
           <CalendarLegend />
         </View>
 
-        {/* Selected info */}
+        {/* 선택한 날짜 정보 */}
         {selected && selectedStatus && (
           <View style={styles.selectedCard}>
             <Text style={styles.selectedDate}>{selected}</Text>
@@ -154,7 +202,6 @@ export function CalendarViewScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingTop: 52, paddingBottom: spacing.md, paddingHorizontal: spacing.md,
@@ -164,7 +211,6 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: { ...typography.h3, fontSize: 16 },
   headerSub: { ...typography.caption, marginTop: 1 },
-
   monthNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
@@ -175,10 +221,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   monthLabel: { ...typography.h3, fontSize: 17 },
-
   weekRow: { flexDirection: 'row', paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   weekday: { width: DAY_SIZE, textAlign: 'center', fontSize: 12, fontWeight: '600', color: colors.textMuted },
-
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, gap: spacing.sm, rowGap: spacing.sm },
   dayCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center' },
   dayCellSelected: { borderRadius: radius.sm, borderWidth: 2, borderColor: colors.terracotta },
@@ -188,10 +232,8 @@ const styles = StyleSheet.create({
   dayPast: { color: colors.textMuted, opacity: 0.4 },
   dayTodayText: { fontWeight: '800', color: colors.terracotta },
   dot: { width: 5, height: 5, borderRadius: 3 },
-
   legendWrap: { marginTop: spacing.lg, paddingHorizontal: spacing.md },
   legendTitle: { ...typography.label, color: colors.textSecondary, marginBottom: spacing.xs },
-
   selectedCard: {
     margin: spacing.md, marginTop: spacing.lg, backgroundColor: colors.card,
     borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm,

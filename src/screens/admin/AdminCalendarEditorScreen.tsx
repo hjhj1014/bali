@@ -1,18 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Dimensions,
-  Alert,
-  ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity,
+  StyleSheet, Dimensions, Alert, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
-import { getAccommodation, getCalendar } from '../../data/store';
-import { saveDateRange, syncCalendar } from '../../data/supabaseStore';
+import { supabase } from '../../lib/supabase';          // ← 직접 호출
+import { getAccommodation } from '../../data/store';    // 숙소명 표시용만
 import { CalendarStatus } from '../../types';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 
@@ -45,59 +40,91 @@ function firstDay(y: number, m: number) { return new Date(y, m, 1).getDay(); }
 
 export function AdminCalendarEditorScreen() {
   const navigation = useNavigation();
-  const acc = getAccommodation();
+  const acc = getAccommodation(); // 숙소명 헤더 표시용
 
   const today = new Date();
-  const [year, setYear]                   = useState(today.getFullYear());
-  const [month, setMonth]                 = useState(today.getMonth());
-  const [selectedStatus, setSelectedStatus] = useState<CalendarStatus>('booked');
-  const [rangeStart, setRangeStart]       = useState<string | null>(null);
-  const [rangeEnd, setRangeEnd]           = useState<string | null>(null);
-  const [tick, setTick]   = useState(0);
-  const [saving, setSaving] = useState(false);
+  const [year,           setYear]   = useState(today.getFullYear());
+  const [month,          setMonth]  = useState(today.getMonth());
+  const [selectedStatus, setStatus] = useState<CalendarStatus>('booked');
+  const [rangeStart,     setStart]  = useState<string | null>(null);
+  const [rangeEnd,       setEnd]    = useState<string | null>(null);
 
-  const calendarData = getCalendar();
+  // ─── Supabase에서 직접 받아온 날짜→상태 맵 ─────────────────────────────────
+  const [dates,   setDates]   = useState<Record<string, CalendarStatus>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
 
-  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
-  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
+  // ── 화면 진입 시 calendar_dates 테이블에서 fetch ───────────────────────────
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      console.log('[AdminCalendar] Supabase fetch 시작...');
+
+      const { data, error } = await supabase
+        .from('calendar_dates')
+        .select('date, status');
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[AdminCalendar] fetch 실패:', error.code, error.message);
+        Alert.alert('❌ 달력 로드 실패', `코드: ${error.code}\n${error.message}`);
+        setLoading(false);
+        return;
+      }
+
+      const map: Record<string, CalendarStatus> = {};
+      (data ?? []).forEach((row) => {
+        map[row.date] = row.status as CalendarStatus;
+      });
+
+      console.log('[AdminCalendar] fetch 성공 ✅', Object.keys(map).length, '개 날짜');
+      setDates(map);
+      setLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  }, []));
+
+  const prevMonth = () => {
+    if (month === 0) { setMonth(11); setYear(y => y - 1); }
+    else setMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (month === 11) { setMonth(0); setYear(y => y + 1); }
+    else setMonth(m => m + 1);
+  };
 
   const days   = daysIn(year, month);
   const offset = firstDay(year, month);
 
-  const getStatus = useCallback(
-    (day: number): CalendarStatus | null => {
-      const dateStr = fmt(year, month, day);
-      return calendarData.dates[dateStr]?.status ?? null;
-    },
-    [year, month, calendarData, tick] // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const getStatus = (day: number): CalendarStatus | null =>
+    dates[fmt(year, month, day)] ?? null;
 
   const isInRange = (day: number): boolean => {
     if (!rangeStart) return false;
-    const dateStr = fmt(year, month, day);
+    const d  = fmt(year, month, day);
     const lo = rangeStart <= (rangeEnd ?? rangeStart) ? rangeStart : (rangeEnd ?? rangeStart);
     const hi = rangeStart <= (rangeEnd ?? rangeStart) ? (rangeEnd ?? rangeStart) : rangeStart;
-    return dateStr >= lo && dateStr <= hi;
+    return d >= lo && d <= hi;
   };
 
   const handleDayPress = (day: number) => {
-    const dateStr = fmt(year, month, day);
+    const d = fmt(year, month, day);
     if (!rangeStart || (rangeStart && rangeEnd)) {
-      setRangeStart(dateStr);
-      setRangeEnd(null);
+      setStart(d); setEnd(null);
     } else {
-      if (dateStr < rangeStart) {
-        setRangeEnd(rangeStart);
-        setRangeStart(dateStr);
-      } else {
-        setRangeEnd(dateStr);
-      }
+      if (d < rangeStart) { setEnd(rangeStart); setStart(d); }
+      else setEnd(d);
     }
   };
 
+  // ── 저장: Supabase upsert → 검증 SELECT → alert ───────────────────────────
   const applyStatus = () => {
     if (!rangeStart) {
-      Alert.alert('날짜를 선택해주세요', '시작 날짜를 먼저 선택해주세요.');
+      Alert.alert('날짜를 선택해주세요', '시작 날짜를 먼저 선택하세요.');
       return;
     }
     const start = rangeStart;
@@ -113,26 +140,81 @@ export function AdminCalendarEditorScreen() {
           text: '변경',
           onPress: async () => {
             setSaving(true);
-            try {
-              await saveDateRange(start, end, selectedStatus);
-              setRangeStart(null);
-              setRangeEnd(null);
-              setTick(n => n + 1);
-              Alert.alert('저장 완료', 'Supabase에 저장되었습니다.');
-            } catch (err: any) {
-              Alert.alert('저장 실패', `오류: ${err?.message ?? '알 수 없는 오류'}`);
-            } finally {
-              setSaving(false);
+
+            // ① upsert할 행 목록 생성
+            const rows: { date: string; status: string; updated_at: string }[] = [];
+            const cur = new Date(start);
+            const fin = new Date(end);
+            while (cur <= fin) {
+              rows.push({
+                date:       cur.toISOString().split('T')[0],
+                status:     selectedStatus,
+                updated_at: new Date().toISOString(),
+              });
+              cur.setDate(cur.getDate() + 1);
             }
+
+            console.log('[AdminCalendar] upsert 시작:', rows.length, '개 행', rows);
+
+            // ② Supabase upsert
+            const { error: upsertError } = await supabase
+              .from('calendar_dates')
+              .upsert(rows, { onConflict: 'date' });
+
+            if (upsertError) {
+              setSaving(false);
+              console.error('[AdminCalendar] upsert 실패:', upsertError.code, upsertError.message);
+              Alert.alert(
+                '❌ 달력 저장 실패',
+                `코드: ${upsertError.code}\n메시지: ${upsertError.message}`
+              );
+              return;
+            }
+
+            // ③ 저장 직후 검증 SELECT
+            const savedDates = rows.map(r => r.date);
+            const { data: verified, error: verifyError } = await supabase
+              .from('calendar_dates')
+              .select('date, status')
+              .in('date', savedDates);
+
+            setSaving(false);
+
+            if (verifyError) {
+              console.error('[AdminCalendar] 검증 실패:', verifyError.message);
+              Alert.alert('⚠️ 저장은 됐지만 검증 실패', verifyError.message);
+            } else {
+              console.log('[AdminCalendar] 달력 저장 완료 ✅ DB 검증값:', JSON.stringify(verified));
+              Alert.alert('✅ 달력 저장 완료', `${rows.length}개 날짜가 저장되었습니다.`);
+            }
+
+            // ④ 로컬 state 갱신 (화면 즉시 반영)
+            setDates(prev => {
+              const next = { ...prev };
+              rows.forEach(r => { next[r.date] = selectedStatus; });
+              return next;
+            });
+            setStart(null);
+            setEnd(null);
           },
         },
       ]
     );
   };
 
+  // ── 로딩 중 ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={styles.loadingWrap}>
+        <ActivityIndicator size="large" color={colors.terracotta} />
+        <Text style={styles.loadingText}>Supabase에서 불러오는 중...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -145,7 +227,7 @@ export function AdminCalendarEditorScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Status selector */}
+        {/* 상태 선택 */}
         <View style={styles.statusSection}>
           <Text style={styles.statusLabel}>적용할 상태 선택</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statusRow}>
@@ -156,7 +238,7 @@ export function AdminCalendarEditorScreen() {
                   styles.statusChip,
                   selectedStatus === s.value && { backgroundColor: s.color, borderColor: s.color },
                 ]}
-                onPress={() => setSelectedStatus(s.value)}
+                onPress={() => setStatus(s.value)}
               >
                 <View style={[styles.statusDot, { backgroundColor: s.color }]} />
                 <Text style={[styles.statusChipText, selectedStatus === s.value && { color: colors.white }]}>
@@ -167,7 +249,7 @@ export function AdminCalendarEditorScreen() {
           </ScrollView>
         </View>
 
-        {/* Range display */}
+        {/* 범위 표시 */}
         <View style={styles.rangeInfo}>
           <View style={styles.rangeBox}>
             <Text style={styles.rangeBoxLabel}>시작일</Text>
@@ -180,7 +262,7 @@ export function AdminCalendarEditorScreen() {
           </View>
         </View>
 
-        {/* Month nav */}
+        {/* 월 네비게이션 */}
         <View style={styles.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={styles.navBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -191,18 +273,20 @@ export function AdminCalendarEditorScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Weekday headers */}
+        {/* 요일 헤더 */}
         <View style={styles.weekRow}>
           {WEEKDAYS.map(d => (
             <Text key={d} style={styles.weekday}>{d}</Text>
           ))}
         </View>
 
-        {/* Calendar grid */}
+        {/* 달력 그리드 */}
         <View style={styles.grid}>
-          {Array.from({ length: offset }).map((_, i) => <View key={`e${i}`} style={styles.dayCell} />)}
+          {Array.from({ length: offset }).map((_, i) => (
+            <View key={`e${i}`} style={styles.dayCell} />
+          ))}
           {Array.from({ length: days }).map((_, i) => {
-            const day    = i + 1;
+            const day     = i + 1;
             const dateStr = fmt(year, month, day);
             const status  = getStatus(day);
             const inRange = isInRange(day);
@@ -230,7 +314,7 @@ export function AdminCalendarEditorScreen() {
           })}
         </View>
 
-        {/* Apply */}
+        {/* 적용 버튼 */}
         <TouchableOpacity
           style={[styles.applyButton, saving && { opacity: 0.7 }]}
           onPress={applyStatus}
@@ -248,7 +332,7 @@ export function AdminCalendarEditorScreen() {
 
         <TouchableOpacity
           style={styles.resetButton}
-          onPress={() => { setRangeStart(null); setRangeEnd(null); }}
+          onPress={() => { setStart(null); setEnd(null); }}
         >
           <Text style={styles.resetButtonText}>선택 초기화</Text>
         </TouchableOpacity>
@@ -261,6 +345,11 @@ export function AdminCalendarEditorScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  loadingWrap: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.background, gap: spacing.md,
+  },
+  loadingText: { ...typography.bodySmall, color: colors.textMuted },
   header: {
     flexDirection: 'row', alignItems: 'center',
     paddingTop: 52, paddingBottom: spacing.md, paddingHorizontal: spacing.md,
@@ -271,7 +360,6 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: { ...typography.h3, fontSize: 16 },
   headerSub: { ...typography.caption, color: colors.terracotta, marginTop: 1 },
-
   statusSection: { paddingTop: spacing.md },
   statusLabel: {
     ...typography.label,
@@ -286,7 +374,6 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusChipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
-
   rangeInfo: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.md, paddingVertical: spacing.md, paddingHorizontal: spacing.md,
@@ -297,7 +384,6 @@ const styles = StyleSheet.create({
   rangeBox: { alignItems: 'center', flex: 1 },
   rangeBoxLabel: { ...typography.caption, marginBottom: 2 },
   rangeBoxDate: { ...typography.body, fontWeight: '600', color: colors.terracotta, fontSize: 14 },
-
   monthNav: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.xl, paddingVertical: spacing.md, marginTop: spacing.sm,
@@ -308,10 +394,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   monthLabel: { ...typography.h3, fontSize: 17 },
-
   weekRow: { flexDirection: 'row', paddingHorizontal: spacing.md, paddingBottom: spacing.sm },
   weekday: { width: DAY_SIZE, textAlign: 'center', fontSize: 12, fontWeight: '600', color: colors.textMuted },
-
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, gap: spacing.sm, rowGap: spacing.sm },
   dayCell: { width: DAY_SIZE, height: DAY_SIZE, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, gap: 2 },
   dayCellInRange: { backgroundColor: colors.terracotta + '20' },
@@ -319,7 +403,6 @@ const styles = StyleSheet.create({
   dayText: { fontSize: 13, fontWeight: '500', color: colors.text },
   dayTextEdge: { color: colors.white, fontWeight: '700' },
   statusDotSmall: { width: 5, height: 5, borderRadius: 3 },
-
   applyButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.sm, margin: spacing.md, marginTop: spacing.lg,
