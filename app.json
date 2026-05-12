@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Bali Mom & Kid Stay",
+    "slug": "mami-bali-stay",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F5ECD7"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mamibalistay.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#F5ECD7"
+      },
+      "package": "com.mamibalistay.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "name": "Bali Mom & Kid Stay",
+      "shortName": "발리맘키즈스테이",
+      "description": "엄마와 아이의 발리 한달살기 — 예약 가능 달력과 카카오톡 상담",
+      "themeColor": "#C2714F",
+      "backgroundColor": "#F5ECD7",
+      "display": "standalone",
+      "orientation": "portrait"
+    },
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}

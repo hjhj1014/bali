@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node -e ' *)",
+      "Bash(cd '/C/Users/guswj/OneDrive/바탕 화면/bali' && ls node_modules/expo/ | head -10)",
+      "Bash(node create-assets.js)",
+      "Bash(cd '/C/Users/guswj/OneDrive/바탕 화면/bali' && find src -name \"*.tsx\" -o -name \"*.ts\" | sort)",
+      "Bash(npx tsc *)",
+      "Bash(npx expo *)",
+      "Bash(cd '/C/Users/guswj/OneDrive/바탕 화면/bali' && rm -rf node_modules package-lock.json .expo && echo \"Cleaned.\")",
+      "Bash(npm view *)",
+      "Bash(npx patch-package *)",
+      "Bash(sleep 8 && cat /C/Users/guswj/AppData/Local/Temp/claude/C--Users-guswj-OneDrive-------bali/44858908-a381-4c78-9b96-4e28bbe64b10/tasks/bx4f0iga4.output 2>/dev/null || echo \"still running\")",
+      "Bash(node -e \"console.log\\(require\\('./package.json'\\).main\\)\")",
+      "Bash(node -e \"const l=require\\('./package-lock.json'\\); ['react-dom','react-native-web'].forEach\\(p=>console.log\\(p+'@'+l.packages['node_modules/'+p]?.version\\)\\)\")",
+      "Bash(del \"C:\\\\Users\\\\guswj\\\\OneDrive\\\\바탕 화면\\\\bali\\\\src\\\\screens\\\\admin\\\\AdminAccommodationListScreen.tsx\")",
+      "PowerShell($base = \"C:\\\\Users\\\\guswj\\\\OneDrive\\\\바탕 화면\\\\bali\"; New-Item -ItemType Directory -Force -Path \"$base\\\\web\\\\images\" | Out-Null; 1..5 | ForEach-Object { $src = \"$base\\\\assets\\\\house\\\\bali$_.jpg\"; $dst = \"$base\\\\web\\\\images\\\\bali$_.jpg\"; if \\(Test-Path $src\\) { Copy-Item $src $dst; \"Copied bali$_.jpg\" } else { \"MISSING: $src\" } })"
+    ]
+  }
+}

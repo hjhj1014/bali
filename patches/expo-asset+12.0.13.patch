@@ -1,0 +1,42 @@
+diff --git a/node_modules/expo-asset/build/AssetUris.js b/node_modules/expo-asset/build/AssetUris.js
+index 54cc343..ef9649d 100644
+--- a/node_modules/expo-asset/build/AssetUris.js
++++ b/node_modules/expo-asset/build/AssetUris.js
+@@ -31,27 +31,22 @@ export function getFileExtension(url) {
+  *
+  * We also normalize the "exp" protocol to "http" to handle internal URLs with the Expo schemes used
+  * to tell the OS to open the URLs in the the Expo client.
++ *
++ * PATCH: Assigning url.protocol on a non-special scheme URL (e.g. exp://) throws a
++ * TypeError in Hermes strict mode (React Native 0.81). We use string replacement instead.
+  */
+ export function getManifestBaseUrl(manifestUrl) {
+-    const urlObject = new URL(manifestUrl);
+-    let nextProtocol = urlObject.protocol;
+-    // Change the scheme to http(s) if it is exp(s)
+-    if (nextProtocol === 'exp:') {
+-        nextProtocol = 'http:';
+-    }
+-    else if (nextProtocol === 'exps:') {
+-        nextProtocol = 'https:';
+-    }
+-    urlObject.protocol = nextProtocol;
++    // Swap exp(s): → http(s): via string replacement to avoid assigning url.protocol,
++    // which throws in Hermes strict mode when the source scheme is non-special.
++    const normalizedUrl = manifestUrl
++        .replace(/^exp:/, 'http:')
++        .replace(/^exps:/, 'https:');
++    const urlObject = new URL(normalizedUrl);
+     // Trim filename, query parameters, and fragment, if any
+     const directory = urlObject.pathname.substring(0, urlObject.pathname.lastIndexOf('/') + 1);
+     urlObject.pathname = directory;
+     urlObject.search = '';
+     urlObject.hash = '';
+-    // The URL spec doesn't allow for changing the protocol to `http` or `https`
+-    // without a port set so instead, we'll just swap the protocol manually.
+-    return urlObject.protocol !== nextProtocol
+-        ? urlObject.href.replace(urlObject.protocol, nextProtocol)
+-        : urlObject.href;
++    return urlObject.href;
+ }
+ //# sourceMappingURL=AssetUris.js.map
