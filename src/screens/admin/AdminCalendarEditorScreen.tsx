@@ -11,18 +11,15 @@ import { getAccommodation } from '../../data/store';
 import { CalendarStatus } from '../../types';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 
-// ─── 달력 크기 계산 ──────────────────────────────────────────────────────────
 const WIN_W    = Math.min(Dimensions.get('window').width, 430);
 const H_PAD    = spacing.md * 2;
 const CELL_GAP = 4;
 const DAY_SIZE = Math.floor((WIN_W - H_PAD - CELL_GAP * 6) / 7);
 
 const STATUS_OPTIONS: { value: CalendarStatus; label: string; color: string }[] = [
-  { value: 'available',   label: '예약가능', color: '#4CAF50' },
-  { value: 'pending',     label: '상담중',   color: '#FFC107' },
-  { value: 'booked',      label: '예약완료', color: '#E53935' },
-  { value: 'maintenance', label: '막힘',     color: '#757575' },
-  { value: 'cancelled',   label: '취소',     color: '#1E88E5' },
+  { value: 'available', label: '예약가능', color: '#4CAF50' },
+  { value: 'pending',   label: '상담중',   color: '#FFC107' },
+  { value: 'booked',    label: '예약완료', color: '#E53935' },
 ];
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -51,7 +48,6 @@ export function AdminCalendarEditorScreen() {
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
 
-  // ── 화면 진입 시 Supabase fetch ─────────────────────────────────────────
   useFocusEffect(useCallback(() => {
     let cancelled = false;
     setLoading(true);
@@ -91,7 +87,6 @@ export function AdminCalendarEditorScreen() {
   const handleDayPress = (day: number) => {
     const d = toDateStr(year, month, day);
     console.log('날짜 선택:', d);
-
     if (!rangeStart || (rangeStart && rangeEnd)) {
       setRangeStart(d);
       setRangeEnd(null);
@@ -117,7 +112,6 @@ export function AdminCalendarEditorScreen() {
     return dateStr > lo && dateStr < hi;
   };
 
-  // ── 달력 저장 ─────────────────────────────────────────────────────────────
   const handleSave = async () => {
     console.log('달력 저장 버튼 클릭');
 
@@ -132,7 +126,6 @@ export function AdminCalendarEditorScreen() {
 
     setSaving(true);
 
-    // upsert할 행 목록
     const rows: { date: string; status: string; updated_at: string }[] = [];
     const cur = new Date(start);
     const fin = new Date(end);
@@ -158,7 +151,6 @@ export function AdminCalendarEditorScreen() {
       return;
     }
 
-    // 검증 SELECT
     const { data: verified } = await supabase
       .from('calendar_dates')
       .select('date, status')
@@ -166,7 +158,6 @@ export function AdminCalendarEditorScreen() {
 
     console.log('[AdminCalendar] 저장 완료 ✅ DB 검증:', JSON.stringify(verified));
 
-    // 로컬 state 즉시 갱신
     setDateMap(prev => {
       const next = { ...prev };
       rows.forEach(r => { next[r.date] = selectedStatus; });
@@ -179,7 +170,6 @@ export function AdminCalendarEditorScreen() {
     Alert.alert('달력 저장 완료', `${rows.length}개 날짜 → ${label}`);
   };
 
-  // ── 렌더 ──────────────────────────────────────────────────────────────────
   const days   = daysInMonth(year, month);
   const offset = firstDayOfMonth(year, month);
 
@@ -194,24 +184,50 @@ export function AdminCalendarEditorScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{acc.name}</Text>
-          <Text style={styles.headerSub}>달력 상태 편집</Text>
+
+      {/* ── 상단 고정 영역: 헤더 + 저장 버튼 ── */}
+      <View style={styles.topFixed}>
+
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>{acc.name}</Text>
+            <Text style={styles.headerSub}>달력 상태 편집</Text>
+          </View>
+          <View style={{ width: 36 }} />
         </View>
-        <View style={{ width: 36 }} />
+
+        {/* 달력 저장 버튼 */}
+        <View style={styles.saveBtnWrap}>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+            onPress={handleSave}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            {saving ? (
+              <View style={styles.saveBtnInner}>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.saveBtnText}>저장 중...</Text>
+              </View>
+            ) : (
+              <Text style={styles.saveBtnText}>달력 저장</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
       </View>
 
-      {/* 스크롤 영역 */}
+      {/* ── 스크롤 영역 ── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
       >
+
         {/* ① 상태 선택 */}
         <View style={styles.statusSection}>
           <Text style={styles.sectionLabel}>① 적용할 상태 선택</Text>
@@ -275,7 +291,7 @@ export function AdminCalendarEditorScreen() {
           ))}
         </View>
 
-        {/* 달력 그리드 — gap 대신 margin 적용 (웹 호환) */}
+        {/* 달력 그리드 */}
         <View style={styles.grid}>
           {Array.from({ length: offset }).map((_, i) => (
             <View key={`e${i}`} style={styles.cell} />
@@ -308,7 +324,7 @@ export function AdminCalendarEditorScreen() {
                 {status && (
                   <View style={[
                     styles.statusDot,
-                    { backgroundColor: STATUS_OPTIONS.find(s => s.value === status)?.color ?? '#ccc' },
+                    { backgroundColor: STATUS_OPTIONS.find(s => s.value === status)?.color ?? '#aaa' },
                   ]} />
                 )}
               </TouchableOpacity>
@@ -324,23 +340,8 @@ export function AdminCalendarEditorScreen() {
         >
           <Text style={styles.resetBtnText}>선택 초기화</Text>
         </TouchableOpacity>
-      </ScrollView>
 
-      {/* ── 하단 고정 저장 버튼 ── */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-          onPress={handleSave}
-          disabled={saving}
-          activeOpacity={0.8}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.saveBtnText}>달력 저장</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -350,16 +351,36 @@ const styles = StyleSheet.create({
   center:      { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { ...typography.bodySmall, color: colors.textMuted },
 
+  // 상단 고정 영역 (헤더 + 저장 버튼)
+  topFixed: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    zIndex: 10,
+  },
+
   header: {
     flexDirection: 'row', alignItems: 'center',
-    paddingTop: 52, paddingBottom: spacing.md, paddingHorizontal: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-    backgroundColor: colors.background,
+    paddingTop: 52, paddingBottom: spacing.sm, paddingHorizontal: spacing.md,
   },
   backBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle:  { ...typography.h3, fontSize: 16 },
   headerSub:    { ...typography.caption, color: colors.terracotta, marginTop: 1 },
+
+  saveBtnWrap: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  saveBtn: {
+    backgroundColor: colors.terracotta,
+    paddingVertical: 18,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  saveBtnText:  { color: '#fff', fontWeight: '800', fontSize: 17 },
 
   sectionLabel: {
     ...typography.label, color: colors.textSecondary,
@@ -373,12 +394,12 @@ const styles = StyleSheet.create({
   },
   statusChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 8,
+    paddingHorizontal: 18, paddingVertical: 10,
     borderRadius: 999, borderWidth: 2,
     backgroundColor: colors.card,
   },
-  dot:      { width: 8, height: 8, borderRadius: 4 },
-  chipText: { fontSize: 13, fontWeight: '700' },
+  dot:      { width: 9, height: 9, borderRadius: 5 },
+  chipText: { fontSize: 14, fontWeight: '700' },
 
   rangeBox: { marginHorizontal: spacing.md, marginTop: 8, marginBottom: 4 },
   rangeRow: {
@@ -430,23 +451,6 @@ const styles = StyleSheet.create({
   dayNum:    { fontSize: 13, fontWeight: '500', color: colors.text },
   statusDot: { width: 5, height: 5, borderRadius: 3, marginTop: 2 },
 
-  resetBtn:     { alignItems: 'center', paddingVertical: spacing.sm, marginBottom: spacing.md },
+  resetBtn:     { alignItems: 'center', paddingVertical: spacing.md },
   resetBtnText: { color: colors.textMuted, fontSize: 13 },
-
-  // 하단 고정 저장 버튼
-  footer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    paddingBottom: 28,
-    backgroundColor: colors.background,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  saveBtn: {
-    backgroundColor: colors.terracotta,
-    paddingVertical: 16,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  saveBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
 });
