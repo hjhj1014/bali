@@ -40,6 +40,7 @@ const NEARBY_CATEGORIES = [
     label: '국제학교',
     places: [
       { name: 'Moral Intelligent School (MIS)', desc: '숙소 인근 소규모 국제학교', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/TBHQcp7Kz8onrBr58' },
+      { name: 'Taruwara Primary School', desc: 'Sanur 지역 초등학교', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/YoMbR1EtG8MwTdhp7' },
     ],
   },
   {
