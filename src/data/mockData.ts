@@ -45,32 +45,18 @@ export const initialAccommodation: Accommodation = {
   kakaoId: 'mamibalistay',
 };
 
-// Build 90-day calendar with sample statuses
+// Build 90-day calendar: booked before 2026-08-28, available from 2026-08-28
 export function buildInitialCalendar(): AccommodationCalendar {
   const dates: AccommodationCalendar['dates'] = {};
   const today = new Date();
-
-  const blocks: Array<{ start: number; end: number; status: AccommodationCalendar['dates'][string]['status'] }> = [
-    { start: 3,  end: 6,  status: 'booked' },
-    { start: 10, end: 11, status: 'pending' },
-    { start: 18, end: 21, status: 'booked' },
-    { start: 25, end: 25, status: 'maintenance' },
-    { start: 32, end: 37, status: 'booked' },
-    { start: 44, end: 45, status: 'pending' },
-    { start: 52, end: 57, status: 'booked' },
-    { start: 63, end: 63, status: 'cancelled' },
-    { start: 70, end: 74, status: 'booked' },
-    { start: 82, end: 83, status: 'pending' },
-  ];
+  const openDate = new Date('2026-08-28');
 
   for (let i = 0; i < 90; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
-    let status: AccommodationCalendar['dates'][string]['status'] = 'available';
-    for (const b of blocks) {
-      if (i >= b.start && i <= b.end) { status = b.status; break; }
-    }
+    const status: AccommodationCalendar['dates'][string]['status'] =
+      d < openDate ? 'booked' : 'available';
     dates[dateStr] = { date: dateStr, status };
   }
 

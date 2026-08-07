@@ -21,6 +21,7 @@ import { AdminGuideManagerScreen }    from '../screens/admin/AdminGuideManagerSc
 
 import { colors } from '../constants/theme';
 import { RootStackParamList } from '../types';
+import { useLanguage } from '../context/LanguageContext';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab   = createBottomTabNavigator();
@@ -35,6 +36,7 @@ const TAB_ICONS: Record<string, [TabIconName, TabIconName]> = {
 };
 
 function MainTabs() {
+  const { t } = useLanguage();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -55,10 +57,10 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Home"    component={HomeScreen}     options={{ title: '홈' }} />
-      <Tab.Screen name="Stays"   component={StayListScreen} options={{ title: '숙소' }} />
-      <Tab.Screen name="Guide"   component={GuideScreen}    options={{ title: '가이드' }} />
-      <Tab.Screen name="Contact" component={ContactScreen}  options={{ title: '문의' }} />
+      <Tab.Screen name="Home"    component={HomeScreen}     options={{ title: t.tab.home }} />
+      <Tab.Screen name="Stays"   component={StayListScreen} options={{ title: t.tab.stays }} />
+      <Tab.Screen name="Guide"   component={GuideScreen}    options={{ title: t.tab.guide }} />
+      <Tab.Screen name="Contact" component={ContactScreen}  options={{ title: t.tab.contact }} />
     </Tab.Navigator>
   );
 }

@@ -11,8 +11,9 @@ import { getAccommodation } from '../../data/store';
 import { syncAccommodation } from '../../data/supabaseStore';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 import { RootStackParamList } from '../../types';
-import { openKakaoChat } from '../../utils/kakao';
+import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
+import { useLanguage } from '../../context/LanguageContext';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -21,9 +22,9 @@ const HERO = 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=120
 export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const [acc, setAcc] = useState(getAccommodation());
+  const { t } = useLanguage();
 
   useFocusEffect(useCallback(() => {
-    // Supabase에서 최신 데이터를 불러와 화면 갱신
     syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
   }, []));
 
@@ -36,19 +37,19 @@ export function HomeScreen() {
         <View style={styles.heroOverlay} />
         <View style={styles.heroContent}>
           <Text style={styles.heroEyebrow}>🌴 Bali Mom & Kid Stay</Text>
-          <Text style={styles.heroTagline}>엄마와 아이의 발리 한달살기</Text>
+          <Text style={styles.heroTagline}>{t.home.tagline}</Text>
           <Text style={styles.heroTitle}>{acc.name}</Text>
           <Text style={styles.heroLocation}>
             <Ionicons name="location" size={13} color="rgba(255,255,255,0.85)" /> {acc.location}
           </Text>
           <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('StayDetail')}>
-            <Text style={styles.heroBtnText}>숙소 자세히 보기</Text>
+            <Text style={styles.heroBtnText}>{t.home.viewDetail}</Text>
             <Ionicons name="arrow-forward" size={15} color={colors.white} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── 안내 문구 배너 (관리자가 설정한 경우만 표시) ── */}
+      {/* ── 안내 문구 배너 ── */}
       {!!acc.notice && (
         <View style={styles.noticeBanner}>
           <Text style={styles.noticeText}>📢 {acc.notice}</Text>
@@ -58,10 +59,10 @@ export function HomeScreen() {
       {/* ── Quick facts ── */}
       <View style={styles.factsCard}>
         {[
-          { icon: 'people-outline',  label: `최대 ${acc.maxGuests}명` },
-          { icon: 'bed-outline',     label: `침실 ${acc.bedrooms}개` },
-          { icon: 'water-outline',   label: `욕실 ${acc.bathrooms}개` },
-          { icon: 'wifi-outline',    label: '와이파이' },
+          { icon: 'people-outline',  label: t.home.guests(acc.maxGuests) },
+          { icon: 'bed-outline',     label: t.home.bedrooms(acc.bedrooms) },
+          { icon: 'water-outline',   label: t.home.bathrooms(acc.bathrooms) },
+          { icon: 'wifi-outline',    label: t.home.wifi },
         ].map(f => (
           <View key={f.label} style={styles.fact}>
             <Ionicons name={f.icon as any} size={20} color={colors.olive} />
@@ -72,7 +73,7 @@ export function HomeScreen() {
 
       {/* ── Short description ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>숙소 소개</Text>
+        <Text style={styles.sectionTitle}>{t.home.aboutTitle}</Text>
         <Text style={styles.bodyText}>{acc.shortDescription}</Text>
       </View>
 
@@ -95,8 +96,8 @@ export function HomeScreen() {
       <TouchableOpacity style={styles.calendarCta} onPress={() => navigation.navigate('CalendarView')}>
         <Ionicons name="calendar-outline" size={22} color={colors.terracotta} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.ctaTitle}>예약 가능 날짜 확인</Text>
-          <Text style={styles.ctaSub}>달력에서 날짜별 예약 상황을 확인하세요</Text>
+          <Text style={styles.ctaTitle}>{t.home.calendarTitle}</Text>
+          <Text style={styles.ctaSub}>{t.home.calendarSub}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.terracotta} />
       </TouchableOpacity>
@@ -104,10 +105,19 @@ export function HomeScreen() {
       {/* ── KakaoTalk CTA ── */}
       <View style={styles.kakaoBanner}>
         <Ionicons name="chatbubble-ellipses" size={26} color="#3A1D1D" />
-        <Text style={styles.kakaoTitle}>예약 문의는 카카오톡으로</Text>
-        <Text style={styles.kakaoSub}>빠르고 편하게 상담드립니다 😊</Text>
+        <Text style={styles.kakaoTitle}>{t.home.kakaoTitle}</Text>
+        <Text style={styles.kakaoSub}>{t.home.kakaoSub}</Text>
         <TouchableOpacity style={styles.kakaoBtn} onPress={openKakaoChat}>
-          <Text style={styles.kakaoBtnText}>카카오톡 상담하기</Text>
+          <Text style={styles.kakaoBtnText}>{t.home.kakaoBtn}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── WhatsApp CTA ── */}
+      <View style={styles.whatsappBanner}>
+        <Text style={styles.whatsappTitle}>{t.contact.whatsappCardTitle}</Text>
+        <Text style={styles.whatsappSub}>{t.contact.whatsappCardDesc}</Text>
+        <TouchableOpacity style={styles.whatsappBtn} onPress={openWhatsApp}>
+          <Text style={styles.whatsappBtnText}>{t.contact.whatsappCardBtn}</Text>
         </TouchableOpacity>
       </View>
 
@@ -174,27 +184,34 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center',
   },
   kakaoTitle: { fontSize: 17, fontWeight: '700', color: '#3A1D1D', marginTop: 8, marginBottom: 4 },
-  kakaoSub: { fontSize: 13, color: '#5A3D3D', marginBottom: spacing.lg },
+  kakaoSub: { fontSize: 13, color: '#5A3D3D', marginBottom: spacing.lg, textAlign: 'center' },
   kakaoBtn: {
     backgroundColor: 'rgba(0,0,0,0.12)', paddingHorizontal: spacing.xl,
     paddingVertical: 12, borderRadius: radius.full,
   },
   kakaoBtnText: { color: '#3A1D1D', fontWeight: '700', fontSize: 15 },
+
+  whatsappBanner: {
+    marginHorizontal: spacing.md, marginBottom: spacing.md,
+    backgroundColor: '#25D366', borderRadius: radius.xl,
+    padding: spacing.xl, alignItems: 'center',
+  },
+  whatsappTitle: { fontSize: 17, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  whatsappSub: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: spacing.lg, textAlign: 'center' },
+  whatsappBtn: {
+    backgroundColor: 'rgba(0,0,0,0.18)', paddingHorizontal: spacing.xl,
+    paddingVertical: 12, borderRadius: radius.full,
+  },
+  whatsappBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
   noticeBanner: {
-    margin: spacing.md,
-    marginBottom: 0,
+    margin: spacing.md, marginBottom: 0,
     backgroundColor: colors.terracotta + '18',
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.terracotta,
+    borderRadius: radius.md, padding: spacing.md,
+    borderLeftWidth: 3, borderLeftColor: colors.terracotta,
   },
-  noticeText: {
-    fontSize: 13,
-    color: colors.terracotta,
-    fontWeight: '600',
-    lineHeight: 20,
-  },
+  noticeText: { fontSize: 13, color: colors.terracotta, fontWeight: '600', lineHeight: 20 },
+
   adminBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 4, alignSelf: 'center', marginTop: spacing.lg,

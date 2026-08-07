@@ -13,9 +13,9 @@ import { colors, spacing, radius, typography } from '../../constants/theme';
 import { RootStackParamList } from '../../types';
 import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
+import { useLanguage } from '../../context/LanguageContext';
 
 type Nav = StackNavigationProp<RootStackParamList>;
-
 
 const width = Math.min(Dimensions.get('window').width, 430);
 
@@ -23,6 +23,7 @@ export function StayDetailScreen() {
   const navigation = useNavigation<Nav>();
   const [acc, setAcc]           = useState(getAccommodation());
   const [photoIndex, setPhotoIndex] = useState(0);
+  const { t } = useLanguage();
 
   useFocusEffect(useCallback(() => {
     syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
@@ -78,9 +79,9 @@ export function StayDetailScreen() {
           {/* Specs */}
           <View style={styles.specs}>
             {[
-              { icon: 'people-outline',  label: `최대 ${acc.maxGuests}명` },
-              { icon: 'bed-outline',     label: `침실 ${acc.bedrooms}개` },
-              { icon: 'water-outline',   label: `욕실 ${acc.bathrooms}개` },
+              { icon: 'people-outline',  label: t.detail.guests(acc.maxGuests) },
+              { icon: 'bed-outline',     label: t.detail.bedrooms(acc.bedrooms) },
+              { icon: 'water-outline',   label: t.detail.bathrooms(acc.bathrooms) },
             ].map(s => (
               <View key={s.label} style={styles.spec}>
                 <Ionicons name={s.icon as any} size={18} color={colors.olive} />
@@ -92,18 +93,18 @@ export function StayDetailScreen() {
           <View style={styles.divider} />
 
           {/* Description */}
-          <Text style={styles.sectionLabel}>숙소 소개</Text>
+          <Text style={styles.sectionLabel}>{t.detail.about}</Text>
           <Text style={styles.description}>{acc.description}</Text>
 
           <View style={styles.divider} />
 
           {/* Amenities */}
-          <Text style={styles.sectionLabel}>편의시설</Text>
+          <Text style={styles.sectionLabel}>{t.detail.amenities}</Text>
           <View style={styles.amenities}>
             {acc.amenities.map(a => (
               <View key={a} style={styles.amenityChip}>
                 <Ionicons name="checkmark-circle" size={13} color={colors.olive} />
-                <Text style={styles.amenityText}>{a}</Text>
+                <Text style={styles.amenityText}>{t.amenities[a] ?? a}</Text>
               </View>
             ))}
           </View>
@@ -114,23 +115,22 @@ export function StayDetailScreen() {
             onPress={() => navigation.navigate('CalendarView')}
           >
             <Ionicons name="calendar-outline" size={20} color={colors.terracotta} />
-            <Text style={styles.calendarBtnText}>예약 가능 달력 보기</Text>
+            <Text style={styles.calendarBtnText}>{t.detail.calendarBtn}</Text>
             <Ionicons name="chevron-forward" size={17} color={colors.terracotta} />
           </TouchableOpacity>
-
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 160 }} />
       </ScrollView>
 
       {/* ── Sticky contact bar ── */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.kakaoBtn} onPress={openKakaoChat}>
           <Ionicons name="chatbubble-ellipses" size={20} color="#3A1D1D" />
-          <Text style={styles.kakaoBtnText}>카카오톡으로 예약 문의</Text>
+          <Text style={styles.kakaoBtnText}>{t.detail.kakaoBtn}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.whatsappBtn} onPress={openWhatsApp}>
-          <Text style={styles.whatsappBtnText}>💬 왓츠앱으로 문의</Text>
+          <Text style={styles.whatsappBtnText}>{t.detail.whatsappBtn}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -206,5 +206,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#25D366', paddingVertical: 13, borderRadius: radius.full,
   },
   whatsappBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-
 });

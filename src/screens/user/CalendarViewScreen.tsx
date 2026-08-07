@@ -5,12 +5,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
-import { supabase } from '../../lib/supabase';           // ← 직접 호출
-import { getAccommodation } from '../../data/store';     // 숙소명 표시용만
+import { supabase } from '../../lib/supabase';
+import { getAccommodation } from '../../data/store';
 import { CalendarLegend } from '../../components/CalendarLegend';
 import { StatusBadge } from '../../components/StatusBadge';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 import { CalendarStatus } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 
 const CONTAINER_WIDTH = Math.min(Dimensions.get('window').width, 430);
 const DAY_SIZE = Math.floor((CONTAINER_WIDTH - spacing.md * 2 - spacing.sm * 6) / 7);
@@ -23,62 +24,33 @@ const STATUS_COLOR: Record<CalendarStatus, string> = {
   maintenance: colors.maintenance,
 };
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
-const MONTHS   = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-
 function pad(n: number) { return String(n).padStart(2, '0'); }
 function fmt(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
 function daysIn(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
 function firstDay(y: number, m: number) { return new Date(y, m, 1).getDay(); }
 
-const HINT: Record<CalendarStatus, string> = {
-  available:   '예약 가능한 날짜입니다. 카카오톡으로 문의해 주세요 😊',
-  pending:     '현재 상담 중인 날짜입니다. 카카오톡으로 먼저 연락해 주세요.',
-  booked:      '이미 예약이 완료된 날짜입니다.',
-  cancelled:   '취소 후 재오픈된 날짜입니다. 카카오톡으로 문의해 보세요.',
-  maintenance: '막혀 있는 날짜로 예약이 불가합니다.',
-};
-
 export function CalendarViewScreen() {
   const navigation = useNavigation();
   const today      = new Date();
   const todayStr   = today.toISOString().split('T')[0];
-  const acc        = getAccommodation(); // 숙소명 헤더 표시용
+  const acc        = getAccommodation();
+  const { t } = useLanguage();
 
   const [year,     setYear]   = useState(today.getFullYear());
   const [month,    setMonth]  = useState(today.getMonth());
   const [selected, setSel]    = useState<string | null>(null);
+  const [dates, setDates]     = useState<Record<string, CalendarStatus>>({});
 
-  // ─── Supabase에서 직접 받아온 날짜→상태 맵 ─────────────────────────────────
-  const [dates, setDates] = useState<Record<string, CalendarStatus>>({});
-
-  // ── 화면 진입 시 calendar_dates 테이블에서 fetch ───────────────────────────
   useFocusEffect(useCallback(() => {
     let cancelled = false;
-
     (async () => {
-      console.log('[CalendarView] Supabase fetch 시작...');
-
-      const { data, error } = await supabase
-        .from('calendar_dates')
-        .select('date, status');
-
+      const { data, error } = await supabase.from('calendar_dates').select('date, status');
       if (cancelled) return;
-
-      if (error) {
-        console.error('[CalendarView] fetch 실패:', error.message);
-        return; // 실패해도 빈 달력으로 표시 (손님 화면이므로 alert 생략)
-      }
-
+      if (error) return;
       const map: Record<string, CalendarStatus> = {};
-      (data ?? []).forEach((row) => {
-        map[row.date] = row.status as CalendarStatus;
-      });
-
-      console.log('[CalendarView] fetch 성공 ✅', Object.keys(map).length, '개 날짜');
+      (data ?? []).forEach((row) => { map[row.date] = row.status as CalendarStatus; });
       setDates(map);
     })();
-
     return () => { cancelled = true; };
   }, []));
 
@@ -93,7 +65,6 @@ export function CalendarViewScreen() {
 
   const days   = daysIn(year, month);
   const offset = firstDay(year, month);
-
   const selectedStatus = selected ? (dates[selected] ?? null) : null;
 
   return (
@@ -105,7 +76,7 @@ export function CalendarViewScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{acc.name}</Text>
-          <Text style={styles.headerSub}>예약 가능 달력</Text>
+          <Text style={styles.headerSub}>{t.calendar.title}</Text>
         </View>
         <View style={{ width: 36 }} />
       </View>
@@ -116,7 +87,9 @@ export function CalendarViewScreen() {
           <TouchableOpacity onPress={prevMonth} style={styles.navBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.monthLabel}>{year}년 {MONTHS[month]}</Text>
+          <Text style={styles.monthLabel}>
+            {t.calendar.monthLabel(year, t.calendar.months[month])}
+          </Text>
           <TouchableOpacity onPress={nextMonth} style={styles.navBtn}>
             <Ionicons name="chevron-forward" size={20} color={colors.text} />
           </TouchableOpacity>
@@ -124,7 +97,7 @@ export function CalendarViewScreen() {
 
         {/* 요일 헤더 */}
         <View style={styles.weekRow}>
-          {WEEKDAYS.map((d, i) => (
+          {t.calendar.weekdays.map((d, i) => (
             <Text
               key={d}
               style={[
@@ -146,7 +119,7 @@ export function CalendarViewScreen() {
           {Array.from({ length: days }).map((_, i) => {
             const day     = i + 1;
             const dateStr = fmt(year, month, day);
-            const status  = dates[dateStr] ?? null;   // ← Supabase 데이터 기준
+            const status  = dates[dateStr] ?? null;
             const isPast  = dateStr < todayStr;
             const isSel   = dateStr === selected;
             const isToday = dateStr === todayStr;
@@ -181,7 +154,7 @@ export function CalendarViewScreen() {
 
         {/* 범례 */}
         <View style={styles.legendWrap}>
-          <Text style={styles.legendTitle}>상태 안내</Text>
+          <Text style={styles.legendTitle}>{t.calendar.legendTitle}</Text>
           <CalendarLegend />
         </View>
 
@@ -190,7 +163,9 @@ export function CalendarViewScreen() {
           <View style={styles.selectedCard}>
             <Text style={styles.selectedDate}>{selected}</Text>
             <StatusBadge status={selectedStatus} />
-            <Text style={styles.selectedHint}>{HINT[selectedStatus]}</Text>
+            <Text style={styles.selectedHint}>
+              {t.calendar.hint[selectedStatus as keyof typeof t.calendar.hint] ?? ''}
+            </Text>
           </View>
         )}
 
