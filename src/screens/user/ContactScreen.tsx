@@ -10,7 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
 import { colors, spacing, radius, typography } from '../../constants/theme';
-import { openKakaoChat } from '../../utils/kakao';
+import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { RootStackParamList } from '../../types';
 
 type Nav = StackNavigationProp<RootStackParamList>;
@@ -44,6 +44,20 @@ export function ContactScreen() {
           <Text style={styles.kakaoIdLabel}>1:1 오픈채팅</Text>
           <Text style={styles.kakaoId}>open.kakao.com/o/sW9hPrui</Text>
         </View>
+      </View>
+
+      {/* WhatsApp */}
+      <View style={styles.whatsappCard}>
+        <Text style={styles.whatsappTitle}>💬 왓츠앱으로 상담</Text>
+        <Text style={styles.whatsappDesc}>
+          해외에서 카카오톡이 불편하신 분은{'\n'}
+          왓츠앱으로도 편하게 문의하세요.
+        </Text>
+        <TouchableOpacity style={styles.whatsappButton} onPress={openWhatsApp}>
+          <Text style={styles.whatsappButtonText}>왓츠앱으로 상담하기</Text>
+          <Ionicons name="arrow-forward" size={18} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.whatsappNumber}>+82-10-4146-5081</Text>
       </View>
 
       {/* FAQ */}
@@ -247,6 +261,46 @@ const styles = StyleSheet.create({
   infoText: {
     ...typography.bodySmall,
     lineHeight: 20,
+  },
+  whatsappCard: {
+    margin: spacing.md,
+    backgroundColor: '#25D366',
+    borderRadius: radius.xl,
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  whatsappTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: spacing.sm,
+  },
+  whatsappDesc: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  whatsappButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: radius.full,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  whatsappButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  whatsappNumber: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.9)',
   },
   adminBtn: {
     flexDirection: 'row',

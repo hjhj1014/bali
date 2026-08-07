@@ -50,7 +50,7 @@ export async function syncAccommodation(): Promise<Accommodation> {
     pricePerNight:    data.price_per_night ?? 0,
     maxGuests:        data.max_guests ?? 4,
     bedrooms:         data.bedrooms ?? 2,
-    bathrooms:        data.bathrooms ?? 1,
+    bathrooms:        data.bathrooms ?? 2,
     amenities:        Array.isArray(data.amenities) ? data.amenities : [],
     kakaoId:          data.kakao_id ?? '',
   });

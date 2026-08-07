@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, Image,
-  TouchableOpacity, StyleSheet, Dimensions,
+  TouchableOpacity, StyleSheet, Dimensions, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,10 +11,61 @@ import { getAccommodation } from '../../data/store';
 import { syncAccommodation } from '../../data/supabaseStore';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 import { RootStackParamList } from '../../types';
-import { openKakaoChat } from '../../utils/kakao';
+import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
 
 type Nav = StackNavigationProp<RootStackParamList>;
+
+const NEARBY_CATEGORIES = [
+  {
+    emoji: '🍽️',
+    label: '맛집 / 카페',
+    places: [
+      { name: '한식당 강남', desc: '현지인도 즐겨 찾는 정통 한식당', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/jkkNQj537rzF5mzh9' },
+      { name: 'PeTo Steakhouse', desc: '분위기 좋은 스테이크 레스토랑', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/ifkYdzCYczc4yXCp6' },
+      { name: 'KidzCafe Sanur', desc: '아이 놀이공간을 갖춘 키즈 카페', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/2XTweNxJbfqW9AZh9' },
+    ],
+  },
+  {
+    emoji: '🧒',
+    label: '키즈 / 레저',
+    places: [
+      { name: 'Sense Garden Kids Center', desc: '감각 발달 놀이 프로그램 키즈 센터', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/Jx5AxYZj9SiZnzpX7' },
+      { name: "Clip 'n Climb Bali", desc: '실내 클라이밍 & 어드벤처 액티비티', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/duyhEZhcF2NB3ZJE8' },
+      { name: 'The Garden Early Learning Centre', desc: '영유아 전문 유치원', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/jL7mq8Hn2kYjJPoV9' },
+    ],
+  },
+  {
+    emoji: '🏫',
+    label: '국제학교',
+    places: [
+      { name: 'Moral Intelligent School (MIS)', desc: '숙소 인근 소규모 국제학교', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/TBHQcp7Kz8onrBr58' },
+    ],
+  },
+  {
+    emoji: '🏃',
+    label: '스포츠 / 피트니스',
+    places: [
+      { name: 'Jungle Padel Sanur', desc: '패들 코트 (라켓 스포츠)', bikeMin: '약 8분', mapUrl: 'https://maps.app.goo.gl/tzZNTsYjp1o2SELC6' },
+      { name: 'Fitness Plus Sanur', desc: '잘 갖춰진 헬스장', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/yb5qntFm35JHS9Xm7' },
+      { name: 'Alur Pilates', desc: '필라테스 스튜디오', bikeMin: '약 8분', mapUrl: 'https://maps.app.goo.gl/Y25xsZgnxZNqyfJy7' },
+    ],
+  },
+  {
+    emoji: '🛒',
+    label: '마트 / 쇼핑',
+    places: [
+      { name: 'LOTTE Mart Wholesale Bali', desc: '한국 식재료·생활용품 대형 마트', bikeMin: '약 10분', mapUrl: 'https://maps.app.goo.gl/JYaGAWsHMtcr3UDV9' },
+    ],
+  },
+  {
+    emoji: '✈️',
+    label: '공항',
+    places: [
+      { name: '응우라라이 국제공항 (DPS)', desc: '발리 국제공항', bikeMin: '약 25분', mapUrl: 'https://maps.app.goo.gl/j7EcRfgzsKYS8BEF7' },
+    ],
+  },
+];
 
 const width = Math.min(Dimensions.get('window').width, 430);
 
@@ -116,16 +167,46 @@ export function StayDetailScreen() {
             <Text style={styles.calendarBtnText}>예약 가능 달력 보기</Text>
             <Ionicons name="chevron-forward" size={17} color={colors.terracotta} />
           </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          {/* Nearby places */}
+          <Text style={styles.sectionLabel}>주변 장소 (바이크 기준)</Text>
+          {NEARBY_CATEGORIES.map(cat => (
+            <View key={cat.label} style={styles.nearbyCategory}>
+              <Text style={styles.nearbyCategoryLabel}>{cat.emoji} {cat.label}</Text>
+              {cat.places.map(place => (
+                <TouchableOpacity
+                  key={place.name}
+                  style={styles.placeCard}
+                  onPress={() => Linking.openURL(place.mapUrl)}
+                  activeOpacity={0.75}
+                >
+                  <View style={styles.placeInfo}>
+                    <Text style={styles.placeName}>{place.name}</Text>
+                    <Text style={styles.placeDesc}>{place.desc}</Text>
+                  </View>
+                  <View style={styles.placeMeta}>
+                    <Text style={styles.bikeTime}>🏍️ {place.bikeMin}</Text>
+                    <Ionicons name="map-outline" size={15} color={colors.terracotta} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 160 }} />
       </ScrollView>
 
-      {/* ── KakaoTalk sticky bar ── */}
+      {/* ── Sticky contact bar ── */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.kakaoBtn} onPress={openKakaoChat}>
           <Ionicons name="chatbubble-ellipses" size={20} color="#3A1D1D" />
           <Text style={styles.kakaoBtnText}>카카오톡으로 예약 문의</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.whatsappBtn} onPress={openWhatsApp}>
+          <Text style={styles.whatsappBtnText}>💬 왓츠앱으로 문의</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -188,12 +269,35 @@ const styles = StyleSheet.create({
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: colors.background,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md, paddingBottom: 28,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 28,
+    borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm,
   },
   kakaoBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#FEE500', paddingVertical: 14, borderRadius: radius.full, gap: spacing.sm,
+    backgroundColor: '#FEE500', paddingVertical: 13, borderRadius: radius.full, gap: spacing.sm,
   },
-  kakaoBtnText: { color: '#3A1D1D', fontWeight: '700', fontSize: 16 },
+  kakaoBtnText: { color: '#3A1D1D', fontWeight: '700', fontSize: 15 },
+  whatsappBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#25D366', paddingVertical: 13, borderRadius: radius.full,
+  },
+  whatsappBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  nearbyCategory: { marginBottom: spacing.md },
+  nearbyCategoryLabel: {
+    fontSize: 13, fontWeight: '700', color: colors.text,
+    marginBottom: spacing.xs, marginTop: spacing.xs,
+  },
+  placeCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.card, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  placeInfo: { flex: 1, marginRight: spacing.sm },
+  placeName: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 2 },
+  placeDesc: { fontSize: 11, color: colors.textSecondary },
+  placeMeta: { alignItems: 'flex-end', gap: 4 },
+  bikeTime: { fontSize: 11, color: colors.terracotta, fontWeight: '600' },
 });

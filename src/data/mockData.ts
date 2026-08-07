@@ -23,22 +23,24 @@ export const HOUSE_ID = 'bali-cozy-house';
 
 export const initialAccommodation: Accommodation = {
   id: HOUSE_ID,
-  name: 'Bali Cozy House',
-  location: 'Sanur, Bali',
-  shortDescription: '발리 Sanur의 조용한 주택가에 자리한 아늑한 패밀리 하우스',
+  name: 'Bali Mom & Kid Stay',
+  location: 'Denpasar Selatan, Bali',
+  shortDescription: '발리 현지 주택가의 침실 2개·욕실 2개 독채 패밀리 하우스',
   notice: '',  // 관리자 화면에서 입력 — 손님 화면 상단에 표시됨
   description:
-    'Bali Cozy House는 발리 Sanur의 한적한 골목길에 위치한 따뜻한 가족 숙소입니다.\n\n' +
-    '넓은 정원과 개인 수영장을 갖추고 있어 아이들이 안전하게 뛰어놀 수 있으며, ' +
-    '완비된 주방 덕분에 발리 로컬 마켓에서 장을 봐 직접 요리하는 즐거움도 누릴 수 있습니다.\n\n' +
-    '국제학교, 레스토랑, 편의점 모두 도보 거리에 있어 장기 체류 가족들에게 최적입니다. ' +
-    '조용한 주택가 분위기 속에서 발리의 일상을 온전히 경험해 보세요.',
+    '발리 Denpasar Selatan의 조용한 현지 주택가에 자리한 독채 패밀리 하우스입니다.\n\n' +
+    '발리 전통 인테리어와 현대적 편의시설이 어우러진 침실 2개·욕실 2개 구성으로, ' +
+    '가족이 여유롭게 지내기에 딱 맞는 크기입니다. ' +
+    '완비된 주방에서 로컬 마켓 식재료로 직접 요리하는 발리 일상을 즐겨보세요.\n\n' +
+    '바이크로 5분 거리에 국제학교와 키즈 센터가 있고, ' +
+    '한국 식재료를 구할 수 있는 롯데마트도 10분이면 닿습니다. ' +
+    '아이와 함께하는 중·장기 체류 가족에게 최적의 환경입니다.',
   photos: housePhotos,
   pricePerNight: 0, // 0 = "문의 가격" (price on inquiry)
   maxGuests: 4,
   bedrooms: 2,
-  bathrooms: 1,
-  amenities: ['개인수영장', '와이파이', '에어컨', '완비된주방', '세탁기', '주차장', '정원', '바베큐'],
+  bathrooms: 2,
+  amenities: ['와이파이', '에어컨', '완비된주방', '세탁기', '주차장', '정원', '바베큐'],
   tags: ['가족맞춤', '학교근처', '조용한동네', '장기체류'],
   kakaoId: 'mamibalistay',
 };
