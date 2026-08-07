@@ -284,5 +284,45 @@ const id: typeof ko = {
   },
 };
 
+// ── Accommodation descriptions (translated) ────────────────────────────────
+export const accTranslations = {
+  ko: {
+    name: 'Bali Mom & Kid Stay',
+    shortDesc: '발리 현지 주택가의 침실 2개·욕실 2개 독채 패밀리 하우스',
+    desc:
+      '발리 Denpasar Selatan의 조용한 현지 주택가에 자리한 독채 패밀리 하우스입니다.\n\n' +
+      '발리 전통 인테리어와 현대적 편의시설이 어우러진 침실 2개·욕실 2개 구성으로, ' +
+      '가족이 여유롭게 지내기에 딱 맞는 크기입니다. ' +
+      '완비된 주방에서 로컬 마켓 식재료로 직접 요리하는 발리 일상을 즐겨보세요.\n\n' +
+      '바이크로 5분 거리에 국제학교와 키즈 센터가 있고, ' +
+      '한국 식재료를 구할 수 있는 롯데마트도 10분이면 닿습니다. ' +
+      '아이와 함께하는 중·장기 체류 가족에게 최적의 환경입니다.',
+  },
+  en: {
+    name: 'Bali Mom & Kid Stay',
+    shortDesc: 'Standalone family house in Denpasar Selatan, Bali — 2 bedrooms & 2 bathrooms',
+    desc:
+      'A standalone family house nestled in a quiet local neighborhood of Denpasar Selatan, Bali.\n\n' +
+      'Featuring 2 bedrooms and 2 bathrooms with a blend of Balinese traditional decor and modern amenities — ' +
+      'just the right size for a family to stay comfortably. ' +
+      'Enjoy the Bali lifestyle by cooking fresh local market ingredients in the fully equipped kitchen.\n\n' +
+      'An international school and kids center are just 5 minutes away by motorbike, ' +
+      'and LOTTE Mart (Korean groceries & daily essentials) is only 10 minutes away. ' +
+      'The perfect base for families on a mid to long-term stay with children.',
+  },
+  id: {
+    name: 'Bali Mom & Kid Stay',
+    shortDesc: 'Rumah keluarga mandiri di Denpasar Selatan, Bali — 2 kamar tidur & 2 kamar mandi',
+    desc:
+      'Rumah keluarga mandiri di lingkungan lokal yang tenang di Denpasar Selatan, Bali.\n\n' +
+      'Dilengkapi 2 kamar tidur dan 2 kamar mandi dengan perpaduan dekorasi Bali tradisional dan fasilitas modern — ' +
+      'ukuran yang pas untuk keluarga tinggal dengan nyaman. ' +
+      'Nikmati gaya hidup Bali dengan memasak bahan-bahan segar dari pasar lokal di dapur yang lengkap.\n\n' +
+      'Sekolah internasional dan pusat anak hanya 5 menit naik motor, ' +
+      'dan LOTTE Mart (bahan makanan Korea & kebutuhan sehari-hari) hanya 10 menit. ' +
+      'Pilihan sempurna untuk keluarga yang menginap jangka menengah hingga panjang bersama anak-anak.',
+  },
+};
+
 export const translations = { ko, en, id };
 export type Translations = typeof ko;

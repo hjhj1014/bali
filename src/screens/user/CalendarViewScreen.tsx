@@ -41,14 +41,25 @@ export function CalendarViewScreen() {
   const [selected, setSel]    = useState<string | null>(null);
   const [dates, setDates]     = useState<Record<string, CalendarStatus>>({});
 
+  const OPEN_DATE = '2026-08-28';
+
   useFocusEffect(useCallback(() => {
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase.from('calendar_dates').select('date, status');
       if (cancelled) return;
-      if (error) return;
       const map: Record<string, CalendarStatus> = {};
       (data ?? []).forEach((row) => { map[row.date] = row.status as CalendarStatus; });
+
+      // Force-fill dates before OPEN_DATE as booked if not explicitly set
+      const base = new Date();
+      for (let i = 0; i < 120; i++) {
+        const d = new Date(base);
+        d.setDate(base.getDate() + i);
+        const ds = d.toISOString().split('T')[0];
+        if (ds < OPEN_DATE && !map[ds]) map[ds] = 'booked';
+      }
+
       setDates(map);
     })();
     return () => { cancelled = true; };

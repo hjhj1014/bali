@@ -14,6 +14,7 @@ import { RootStackParamList } from '../../types';
 import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
 import { useLanguage } from '../../context/LanguageContext';
+import { accTranslations } from '../../i18n/translations';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -23,7 +24,8 @@ export function StayDetailScreen() {
   const navigation = useNavigation<Nav>();
   const [acc, setAcc]           = useState(getAccommodation());
   const [photoIndex, setPhotoIndex] = useState(0);
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const accT = accTranslations[lang];
 
   useFocusEffect(useCallback(() => {
     syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
@@ -70,7 +72,7 @@ export function StayDetailScreen() {
 
         {/* ── Info ── */}
         <View style={styles.info}>
-          <Text style={styles.name}>{acc.name}</Text>
+          <Text style={styles.name}>{accT.name}</Text>
           <View style={styles.locationRow}>
             <Ionicons name="location" size={14} color={colors.terracotta} />
             <Text style={styles.location}>{acc.location}</Text>
@@ -94,7 +96,7 @@ export function StayDetailScreen() {
 
           {/* Description */}
           <Text style={styles.sectionLabel}>{t.detail.about}</Text>
-          <Text style={styles.description}>{acc.description}</Text>
+          <Text style={styles.description}>{accT.desc}</Text>
 
           <View style={styles.divider} />
 

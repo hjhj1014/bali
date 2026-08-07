@@ -14,6 +14,7 @@ import { RootStackParamList } from '../../types';
 import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
 import { useLanguage } from '../../context/LanguageContext';
+import { accTranslations } from '../../i18n/translations';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -22,7 +23,8 @@ const HERO = 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=120
 export function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const [acc, setAcc] = useState(getAccommodation());
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const accT = accTranslations[lang];
 
   useFocusEffect(useCallback(() => {
     syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
@@ -38,7 +40,7 @@ export function HomeScreen() {
         <View style={styles.heroContent}>
           <Text style={styles.heroEyebrow}>🌴 Bali Mom & Kid Stay</Text>
           <Text style={styles.heroTagline}>{t.home.tagline}</Text>
-          <Text style={styles.heroTitle}>{acc.name}</Text>
+          <Text style={styles.heroTitle}>{accT.name}</Text>
           <Text style={styles.heroLocation}>
             <Ionicons name="location" size={13} color="rgba(255,255,255,0.85)" /> {acc.location}
           </Text>
@@ -74,7 +76,7 @@ export function HomeScreen() {
       {/* ── Short description ── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t.home.aboutTitle}</Text>
-        <Text style={styles.bodyText}>{acc.shortDescription}</Text>
+        <Text style={styles.bodyText}>{accT.shortDesc}</Text>
       </View>
 
       {/* ── Photo strip ── */}
