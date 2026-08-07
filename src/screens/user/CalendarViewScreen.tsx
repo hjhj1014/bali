@@ -1,9 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useFocusEffect } from '@react-navigation/native';
 import { EmojiIcon as Ionicons } from '../../components/EmojiIcon';
 import { supabase } from '../../lib/supabase';
 import { getAccommodation } from '../../data/store';
@@ -13,6 +12,7 @@ import { colors, spacing, radius, typography } from '../../constants/theme';
 import { CalendarStatus } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 
+const OPEN_DATE = '2026-08-28';
 const CONTAINER_WIDTH = Math.min(Dimensions.get('window').width, 430);
 const DAY_SIZE = Math.floor((CONTAINER_WIDTH - spacing.md * 2 - spacing.sm * 6) / 7);
 
@@ -24,46 +24,61 @@ const STATUS_COLOR: Record<CalendarStatus, string> = {
   maintenance: colors.maintenance,
 };
 
-function pad(n: number) { return String(n).padStart(2, '0'); }
-function fmt(y: number, m: number, d: number) { return `${y}-${pad(m + 1)}-${pad(d)}`; }
+// Use local date to avoid UTC timezone off-by-one (Bali = UTC+8)
+function localStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function daysIn(y: number, m: number) { return new Date(y, m + 1, 0).getDate(); }
 function firstDay(y: number, m: number) { return new Date(y, m, 1).getDay(); }
+function cellDate(y: number, m: number, day: number): string {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// Pre-fill synchronously so calendar shows correct status immediately on mount
+function buildInitialDates(): Record<string, CalendarStatus> {
+  const map: Record<string, CalendarStatus> = {};
+  const today = new Date();
+  for (let i = 0; i < 180; i++) {
+    // Use Date constructor with y/m/d to avoid timezone issues
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    const ds = localStr(d);
+    if (ds < OPEN_DATE) map[ds] = 'booked';
+  }
+  return map;
+}
 
 export function CalendarViewScreen() {
   const navigation = useNavigation();
-  const today      = new Date();
-  const todayStr   = today.toISOString().split('T')[0];
-  const acc        = getAccommodation();
+  const acc = getAccommodation();
   const { t } = useLanguage();
 
-  const [year,     setYear]   = useState(today.getFullYear());
-  const [month,    setMonth]  = useState(today.getMonth());
-  const [selected, setSel]    = useState<string | null>(null);
-  const [dates, setDates]     = useState<Record<string, CalendarStatus>>({});
+  const todayStr = localStr(new Date());
+  const today = new Date();
 
-  const OPEN_DATE = '2026-08-28';
+  const [year, setYear]   = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth());
+  const [selected, setSel] = useState<string | null>(null);
 
-  useFocusEffect(useCallback(() => {
-    let cancelled = false;
+  // Initialize with pre-filled booked dates — no blank flash
+  const [dates, setDates] = useState<Record<string, CalendarStatus>>(buildInitialDates);
+
+  useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from('calendar_dates').select('date, status');
-      if (cancelled) return;
-      const map: Record<string, CalendarStatus> = {};
-      (data ?? []).forEach((row) => { map[row.date] = row.status as CalendarStatus; });
-
-      // Force-fill dates before OPEN_DATE as booked if not explicitly set
-      const base = new Date();
-      for (let i = 0; i < 120; i++) {
-        const d = new Date(base);
-        d.setDate(base.getDate() + i);
-        const ds = d.toISOString().split('T')[0];
-        if (ds < OPEN_DATE && !map[ds]) map[ds] = 'booked';
-      }
-
-      setDates(map);
+      const { data } = await supabase.from('calendar_dates').select('date, status');
+      if (!data) return;
+      setDates(prev => {
+        const merged = { ...prev }; // keep all pre-filled booked dates
+        data.forEach(row => {
+          // Supabase data only affects dates from OPEN_DATE onwards
+          if (row.date >= OPEN_DATE) {
+            merged[row.date] = row.status as CalendarStatus;
+          }
+        });
+        return merged;
+      });
     })();
-    return () => { cancelled = true; };
-  }, []));
+  }, []);
 
   const prevMonth = () => {
     if (month === 0) { setMonth(11); setYear(y => y - 1); }
@@ -80,7 +95,6 @@ export function CalendarViewScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={22} color={colors.text} />
@@ -93,7 +107,6 @@ export function CalendarViewScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* 월 네비게이션 */}
         <View style={styles.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={styles.navBtn}>
             <Ionicons name="chevron-back" size={20} color={colors.text} />
@@ -106,7 +119,6 @@ export function CalendarViewScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 요일 헤더 */}
         <View style={styles.weekRow}>
           {t.calendar.weekdays.map((d, i) => (
             <Text
@@ -122,14 +134,13 @@ export function CalendarViewScreen() {
           ))}
         </View>
 
-        {/* 달력 그리드 */}
         <View style={styles.grid}>
           {Array.from({ length: offset }).map((_, i) => (
             <View key={`e${i}`} style={styles.dayCell} />
           ))}
           {Array.from({ length: days }).map((_, i) => {
             const day     = i + 1;
-            const dateStr = fmt(year, month, day);
+            const dateStr = cellDate(year, month, day);
             const status  = dates[dateStr] ?? null;
             const isPast  = dateStr < todayStr;
             const isSel   = dateStr === selected;
@@ -145,7 +156,7 @@ export function CalendarViewScreen() {
                 <View style={[
                   styles.dayInner,
                   isToday && styles.dayToday,
-                  status && !isPast && { backgroundColor: STATUS_COLOR[status] + '28' },
+                  status && { backgroundColor: STATUS_COLOR[status] + '30' },
                 ]}>
                   <Text style={[
                     styles.dayText,
@@ -154,7 +165,7 @@ export function CalendarViewScreen() {
                   ]}>
                     {day}
                   </Text>
-                  {status && !isPast && (
+                  {status && (
                     <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] }]} />
                   )}
                 </View>
@@ -163,13 +174,11 @@ export function CalendarViewScreen() {
           })}
         </View>
 
-        {/* 범례 */}
         <View style={styles.legendWrap}>
           <Text style={styles.legendTitle}>{t.calendar.legendTitle}</Text>
           <CalendarLegend />
         </View>
 
-        {/* 선택한 날짜 정보 */}
         {selected && selectedStatus && (
           <View style={styles.selectedCard}>
             <Text style={styles.selectedDate}>{selected}</Text>
