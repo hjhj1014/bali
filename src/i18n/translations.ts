@@ -154,6 +154,7 @@ const en: typeof ko = {
       g11: 'Pilates studio in the Renon area.',
       g12: 'Large mart with Korean groceries & daily essentials.',
       g13: 'Bali International Airport.',
+      g14: 'Korean restaurant in Sanur. Great for Korean food cravings.',
     },
   },
   contact: {
@@ -253,6 +254,7 @@ const id: typeof ko = {
       g11: 'Studio pilates di area Renon.',
       g12: 'Supermarket besar dengan bahan makanan Korea & kebutuhan sehari-hari.',
       g13: 'Bandara Internasional Bali.',
+      g14: 'Restoran Korea di Sanur. Cocok saat kangen masakan Korea.',
     },
   },
   contact: {
