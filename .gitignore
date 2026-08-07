@@ -1,1 +1,3 @@
-node_modules/ 
+node_modules/
+# Expo export creates a Unicode RTL-prefixed images folder — never commit it
+dist/‫images/
