@@ -42,7 +42,7 @@ export function GuideScreen() {
       <View style={styles.topSection}>
         <View style={styles.header}>
           <Text style={styles.title}>발리 가이드</Text>
-          <Text style={styles.subtitle}>Sanur 주변 추천 장소</Text>
+          <Text style={styles.subtitle}>숙소 주변 추천 장소 (바이크 기준)</Text>
         </View>
 
         {/* Search bar */}

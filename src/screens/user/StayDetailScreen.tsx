@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, Image,
-  TouchableOpacity, StyleSheet, Dimensions, Linking,
+  TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,57 +16,6 @@ import { imageSource } from '../../utils/imageSource';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
-const NEARBY_CATEGORIES = [
-  {
-    emoji: '🍽️',
-    label: '맛집 / 카페',
-    places: [
-      { name: '한식당 강남', desc: '현지인도 즐겨 찾는 정통 한식당', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/jkkNQj537rzF5mzh9' },
-      { name: 'PeTo Steakhouse', desc: '분위기 좋은 스테이크 레스토랑', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/ifkYdzCYczc4yXCp6' },
-      { name: 'KidzCafe Sanur', desc: '아이 놀이공간을 갖춘 키즈 카페', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/2XTweNxJbfqW9AZh9' },
-    ],
-  },
-  {
-    emoji: '🧒',
-    label: '키즈 / 레저',
-    places: [
-      { name: 'Sense Garden Kids Center', desc: '감각 발달 놀이 프로그램 키즈 센터', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/Jx5AxYZj9SiZnzpX7' },
-      { name: "Clip 'n Climb Bali", desc: '실내 클라이밍 & 어드벤처 액티비티', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/duyhEZhcF2NB3ZJE8' },
-      { name: 'The Garden Early Learning Centre', desc: '영유아 전문 유치원', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/jL7mq8Hn2kYjJPoV9' },
-    ],
-  },
-  {
-    emoji: '🏫',
-    label: '국제학교',
-    places: [
-      { name: 'Moral Intelligent School (MIS)', desc: '숙소 인근 소규모 국제학교', bikeMin: '약 5분', mapUrl: 'https://maps.app.goo.gl/TBHQcp7Kz8onrBr58' },
-      { name: 'Taruwara Primary School', desc: 'Sanur 지역 초등학교', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/YoMbR1EtG8MwTdhp7' },
-    ],
-  },
-  {
-    emoji: '🏃',
-    label: '스포츠 / 피트니스',
-    places: [
-      { name: 'Jungle Padel Sanur', desc: '패들 코트 (라켓 스포츠)', bikeMin: '약 8분', mapUrl: 'https://maps.app.goo.gl/tzZNTsYjp1o2SELC6' },
-      { name: 'Fitness Plus Sanur', desc: '잘 갖춰진 헬스장', bikeMin: '약 12분', mapUrl: 'https://maps.app.goo.gl/yb5qntFm35JHS9Xm7' },
-      { name: 'Alur Pilates', desc: '필라테스 스튜디오', bikeMin: '약 8분', mapUrl: 'https://maps.app.goo.gl/Y25xsZgnxZNqyfJy7' },
-    ],
-  },
-  {
-    emoji: '🛒',
-    label: '마트 / 쇼핑',
-    places: [
-      { name: 'LOTTE Mart Wholesale Bali', desc: '한국 식재료·생활용품 대형 마트', bikeMin: '약 10분', mapUrl: 'https://maps.app.goo.gl/JYaGAWsHMtcr3UDV9' },
-    ],
-  },
-  {
-    emoji: '✈️',
-    label: '공항',
-    places: [
-      { name: '응우라라이 국제공항 (DPS)', desc: '발리 국제공항', bikeMin: '약 25분', mapUrl: 'https://maps.app.goo.gl/j7EcRfgzsKYS8BEF7' },
-    ],
-  },
-];
 
 const width = Math.min(Dimensions.get('window').width, 430);
 
@@ -169,35 +118,9 @@ export function StayDetailScreen() {
             <Ionicons name="chevron-forward" size={17} color={colors.terracotta} />
           </TouchableOpacity>
 
-          <View style={styles.divider} />
-
-          {/* Nearby places */}
-          <Text style={styles.sectionLabel}>주변 장소 (바이크 기준)</Text>
-          {NEARBY_CATEGORIES.map(cat => (
-            <View key={cat.label} style={styles.nearbyCategory}>
-              <Text style={styles.nearbyCategoryLabel}>{cat.emoji} {cat.label}</Text>
-              {cat.places.map(place => (
-                <TouchableOpacity
-                  key={place.name}
-                  style={styles.placeCard}
-                  onPress={() => Linking.openURL(place.mapUrl)}
-                  activeOpacity={0.75}
-                >
-                  <View style={styles.placeInfo}>
-                    <Text style={styles.placeName}>{place.name}</Text>
-                    <Text style={styles.placeDesc}>{place.desc}</Text>
-                  </View>
-                  <View style={styles.placeMeta}>
-                    <Text style={styles.bikeTime}>🏍️ {place.bikeMin}</Text>
-                    <Ionicons name="map-outline" size={15} color={colors.terracotta} />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
         </View>
 
-        <View style={{ height: 160 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* ── Sticky contact bar ── */}
@@ -284,21 +207,4 @@ const styles = StyleSheet.create({
   },
   whatsappBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
-  nearbyCategory: { marginBottom: spacing.md },
-  nearbyCategoryLabel: {
-    fontSize: 13, fontWeight: '700', color: colors.text,
-    marginBottom: spacing.xs, marginTop: spacing.xs,
-  },
-  placeCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.card, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  placeInfo: { flex: 1, marginRight: spacing.sm },
-  placeName: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 2 },
-  placeDesc: { fontSize: 11, color: colors.textSecondary },
-  placeMeta: { alignItems: 'flex-end', gap: 4 },
-  bikeTime: { fontSize: 11, color: colors.terracotta, fontWeight: '600' },
 });
