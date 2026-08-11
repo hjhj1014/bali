@@ -39,7 +39,7 @@ export function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Photo gallery ── */}
         <View>
@@ -207,6 +207,7 @@ export function StayDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1 },
 
   mainPhoto: { width, height: 300 },
   backBtn: {
