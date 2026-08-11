@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, Image,
-  TouchableOpacity, StyleSheet,
+  TouchableOpacity, StyleSheet, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -11,10 +11,10 @@ import { getAccommodation } from '../../data/store';
 import { syncAccommodation } from '../../data/supabaseStore';
 import { colors, spacing, radius, typography } from '../../constants/theme';
 import { RootStackParamList } from '../../types';
-import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
 import { useLanguage } from '../../context/LanguageContext';
 import { accTranslations } from '../../i18n/translations';
+import { AIRBNB_URL } from '../../config/constants';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -30,24 +30,40 @@ export function HomeScreen() {
     syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
   }, []));
 
+  const openAirbnb = () => {
+    if (AIRBNB_URL) Linking.openURL(AIRBNB_URL);
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       {/* ── Hero ── */}
       <View style={styles.hero}>
-        <Image source={acc.photos[0] != null ? imageSource(acc.photos[0]) : { uri: HERO }} style={styles.heroImage} resizeMode="cover" />
+        <Image
+          source={acc.photos[0] != null ? imageSource(acc.photos[0]) : { uri: HERO }}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
         <View style={styles.heroOverlay} />
         <View style={styles.heroContent}>
-          <Text style={styles.heroEyebrow}>🌴 Bali Mom & Kid Stay</Text>
+          <Text style={styles.heroEyebrow}>🌴 Sanur, Bali</Text>
           <Text style={styles.heroTagline}>{t.home.tagline}</Text>
           <Text style={styles.heroTitle}>{accT.name}</Text>
-          <Text style={styles.heroLocation}>
-            <Ionicons name="location" size={13} color="rgba(255,255,255,0.85)" /> {acc.location}
-          </Text>
-          <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('StayDetail')}>
-            <Text style={styles.heroBtnText}>{t.home.viewDetail}</Text>
-            <Ionicons name="arrow-forward" size={15} color={colors.white} />
-          </TouchableOpacity>
+          <View style={styles.heroButtons}>
+            <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('StayDetail')}>
+              <Text style={styles.heroBtnText}>{t.home.viewDetail}</Text>
+              <Ionicons name="arrow-forward" size={15} color={colors.white} />
+            </TouchableOpacity>
+            {AIRBNB_URL ? (
+              <TouchableOpacity style={styles.heroBtnAirbnb} onPress={openAirbnb}>
+                <Text style={styles.heroBtnAirbnbText}>{t.home.airbnbBtn}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.heroBtnAirbnbDisabled}>
+                <Text style={styles.heroBtnAirbnbDisabledText}>{t.home.airbnbComingSoon}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
@@ -94,6 +110,15 @@ export function HomeScreen() {
         </ScrollView>
       )}
 
+      {/* ── Story section ── */}
+      <View style={styles.storySection}>
+        <Text style={styles.storyTitle}>{t.home.storyTitle}</Text>
+        <Text style={styles.storyBody}>{t.home.storyBody}</Text>
+        <TouchableOpacity style={styles.storyBtn} onPress={() => navigation.navigate('StayDetail')}>
+          <Text style={styles.storyBtnText}>{t.home.storyBtn}</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Calendar CTA ── */}
       <TouchableOpacity style={styles.calendarCta} onPress={() => navigation.navigate('CalendarView')}>
         <Ionicons name="calendar-outline" size={22} color={colors.terracotta} />
@@ -103,25 +128,6 @@ export function HomeScreen() {
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.terracotta} />
       </TouchableOpacity>
-
-      {/* ── KakaoTalk CTA ── */}
-      <View style={styles.kakaoBanner}>
-        <Ionicons name="chatbubble-ellipses" size={26} color="#3A1D1D" />
-        <Text style={styles.kakaoTitle}>{t.home.kakaoTitle}</Text>
-        <Text style={styles.kakaoSub}>{t.home.kakaoSub}</Text>
-        <TouchableOpacity style={styles.kakaoBtn} onPress={openKakaoChat}>
-          <Text style={styles.kakaoBtnText}>{t.home.kakaoBtn}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* ── WhatsApp CTA ── */}
-      <View style={styles.whatsappBanner}>
-        <Text style={styles.whatsappTitle}>{t.contact.whatsappCardTitle}</Text>
-        <Text style={styles.whatsappSub}>{t.contact.whatsappCardDesc}</Text>
-        <TouchableOpacity style={styles.whatsappBtn} onPress={openWhatsApp}>
-          <Text style={styles.whatsappBtnText}>{t.contact.whatsappCardBtn}</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* ── Admin access ── */}
       <TouchableOpacity
@@ -140,14 +146,14 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  hero: { height: 420, position: 'relative' },
+  hero: { height: 460, position: 'relative' },
   heroImage: { width: '100%', height: '100%' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,10,0,0.45)' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,10,0,0.50)' },
   heroContent: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: spacing.xl },
-  heroEyebrow: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '700', marginBottom: 4 },
-  heroTagline: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '400', marginBottom: 8 },
-  heroTitle: { color: colors.white, fontSize: 28, fontWeight: '800', marginBottom: 4 },
-  heroLocation: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: spacing.lg },
+  heroEyebrow: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  heroTagline: { color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '400', lineHeight: 22, marginBottom: 12 },
+  heroTitle: { color: colors.white, fontSize: 26, fontWeight: '800', marginBottom: spacing.md },
+  heroButtons: { gap: spacing.sm },
   heroBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.terracotta, alignSelf: 'flex-start',
@@ -155,6 +161,20 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   heroBtnText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  heroBtnAirbnb: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.lg, paddingVertical: 12,
+    borderRadius: radius.full,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)',
+  },
+  heroBtnAirbnbText: { color: colors.white, fontWeight: '600', fontSize: 13 },
+  heroBtnAirbnbDisabled: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.lg, paddingVertical: 10,
+    borderRadius: radius.full,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+  },
+  heroBtnAirbnbDisabledText: { color: 'rgba(255,255,255,0.5)', fontSize: 12 },
 
   factsCard: {
     flexDirection: 'row', justifyContent: 'space-around',
@@ -172,6 +192,16 @@ const styles = StyleSheet.create({
   photoStrip: { paddingHorizontal: spacing.md, gap: spacing.sm, paddingBottom: spacing.md },
   stripPhoto: { width: 160, height: 110, borderRadius: radius.md },
 
+  storySection: {
+    marginHorizontal: spacing.md, marginBottom: spacing.md,
+    backgroundColor: colors.creamDark, borderRadius: radius.xl,
+    padding: spacing.xl,
+  },
+  storyTitle: { fontSize: 18, fontWeight: '800', color: colors.text, lineHeight: 26, marginBottom: spacing.md },
+  storyBody: { ...typography.body, color: colors.textSecondary, lineHeight: 24, marginBottom: spacing.lg },
+  storyBtn: { alignSelf: 'flex-start' },
+  storyBtnText: { color: colors.terracotta, fontWeight: '700', fontSize: 14 },
+
   calendarCta: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     margin: spacing.md, padding: spacing.md,
@@ -180,31 +210,6 @@ const styles = StyleSheet.create({
   },
   ctaTitle: { ...typography.body, fontWeight: '700', color: colors.terracotta },
   ctaSub: { ...typography.bodySmall, marginTop: 2 },
-
-  kakaoBanner: {
-    margin: spacing.md, backgroundColor: '#FEE500',
-    borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center',
-  },
-  kakaoTitle: { fontSize: 17, fontWeight: '700', color: '#3A1D1D', marginTop: 8, marginBottom: 4 },
-  kakaoSub: { fontSize: 13, color: '#5A3D3D', marginBottom: spacing.lg, textAlign: 'center' },
-  kakaoBtn: {
-    backgroundColor: 'rgba(0,0,0,0.12)', paddingHorizontal: spacing.xl,
-    paddingVertical: 12, borderRadius: radius.full,
-  },
-  kakaoBtnText: { color: '#3A1D1D', fontWeight: '700', fontSize: 15 },
-
-  whatsappBanner: {
-    marginHorizontal: spacing.md, marginBottom: spacing.md,
-    backgroundColor: '#25D366', borderRadius: radius.xl,
-    padding: spacing.xl, alignItems: 'center',
-  },
-  whatsappTitle: { fontSize: 17, fontWeight: '700', color: '#fff', marginBottom: 4 },
-  whatsappSub: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginBottom: spacing.lg, textAlign: 'center' },
-  whatsappBtn: {
-    backgroundColor: 'rgba(0,0,0,0.18)', paddingHorizontal: spacing.xl,
-    paddingVertical: 12, borderRadius: radius.full,
-  },
-  whatsappBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
   noticeBanner: {
     margin: spacing.md, marginBottom: 0,

@@ -6,7 +6,7 @@ const STORAGE_KEY = 'bali_lang_v1';
 function readLang(): Lang {
   try {
     const v = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
-    if (v === 'ko' || v === 'en' || v === 'id') return v;
+    if (v === 'ko' || v === 'en' || v === 'id' || v === 'uk' || v === 'es') return v;
   } catch {}
   return 'ko';
 }

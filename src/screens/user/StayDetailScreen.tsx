@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, Image,
-  TouchableOpacity, StyleSheet, Dimensions,
+  TouchableOpacity, StyleSheet, Dimensions, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,6 +15,7 @@ import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { imageSource } from '../../utils/imageSource';
 import { useLanguage } from '../../context/LanguageContext';
 import { accTranslations } from '../../i18n/translations';
+import { AIRBNB_URL } from '../../config/constants';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -31,6 +32,10 @@ export function StayDetailScreen() {
     syncAccommodation().then(setAcc).catch(() => setAcc(getAccommodation()));
     setPhotoIndex(0);
   }, []));
+
+  const openAirbnb = () => {
+    if (AIRBNB_URL) Linking.openURL(AIRBNB_URL);
+  };
 
   return (
     <View style={styles.container}>
@@ -122,6 +127,67 @@ export function StayDetailScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* ── 5-B: Story ── */}
+        <View style={styles.storySection}>
+          <Text style={styles.storySectionTitle}>{t.detail.storyTitle}</Text>
+          <Text style={styles.storySectionBody}>{t.detail.storyBody}</Text>
+        </View>
+
+        {/* ── 5-C: Books & Art ── */}
+        <View style={styles.featureSection}>
+          <Text style={styles.featureTitle}>{t.detail.booksArtTitle}</Text>
+          <Text style={styles.featureBody}>{t.detail.booksArtBody}</Text>
+          <View style={styles.quoteBox}>
+            <Text style={styles.quoteText}>{t.detail.booksArtQuote}</Text>
+          </View>
+        </View>
+
+        {/* ── 5-D: For Mom ── */}
+        <View style={[styles.featureSection, styles.featureSectionAlt]}>
+          <Text style={styles.featureTitle}>{t.detail.forMomTitle}</Text>
+          <Text style={styles.featureBody}>{t.detail.forMomBody}</Text>
+          <View style={[styles.quoteBox, styles.quoteBoxAlt]}>
+            <Text style={styles.quoteText}>{t.detail.forMomQuote}</Text>
+          </View>
+        </View>
+
+        {/* ── 5-E: Sanur Life ── */}
+        <View style={styles.featureSection}>
+          <Text style={styles.featureTitle}>{t.detail.sanurLifeTitle}</Text>
+          <Text style={styles.featureBody}>{t.detail.sanurLifeBody}</Text>
+          <View style={styles.noteBox}>
+            <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+            <Text style={styles.noteText}>{t.detail.sanurLifeNote}</Text>
+          </View>
+        </View>
+
+        {/* ── 5-F: Tropical Living ── */}
+        <View style={[styles.featureSection, styles.featureSectionAlt]}>
+          <Text style={styles.featureTitle}>{t.detail.tropicalTitle}</Text>
+          <Text style={styles.featureBody}>{t.detail.tropicalBody}</Text>
+          <View style={[styles.quoteBox, styles.quoteBoxSubtle]}>
+            <Text style={styles.quoteText}>{t.detail.tropicalQuote}</Text>
+          </View>
+        </View>
+
+        {/* ── 5-G: Final CTA + Airbnb ── */}
+        <View style={styles.finalCta}>
+          <Text style={styles.finalCtaTitle}>{t.detail.finalCtaTitle}</Text>
+          <Text style={styles.finalCtaBody}>{t.detail.finalCtaBody}</Text>
+
+          {AIRBNB_URL ? (
+            <TouchableOpacity style={styles.airbnbBtn} onPress={openAirbnb}>
+              <Text style={styles.airbnbBtnText}>{t.detail.airbnbBtn}</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.airbnbBtnDisabled}>
+              <Text style={styles.airbnbBtnDisabledText}>{t.detail.airbnbComingSoon}</Text>
+            </View>
+          )}
+
+          <Text style={styles.airbnbNote}>{t.detail.airbnbNote}</Text>
+        </View>
+
         <View style={{ height: 160 }} />
       </ScrollView>
 
@@ -192,6 +258,70 @@ const styles = StyleSheet.create({
   },
   calendarBtnText: { flex: 1, color: colors.terracotta, fontWeight: '700', fontSize: 15 },
 
+  // 5-B Story
+  storySection: {
+    backgroundColor: colors.creamDark,
+    marginHorizontal: spacing.md, marginBottom: spacing.md,
+    borderRadius: radius.xl, padding: spacing.xl,
+  },
+  storySectionTitle: { fontSize: 20, fontWeight: '800', color: colors.text, lineHeight: 28, marginBottom: spacing.md },
+  storySectionBody: { ...typography.body, color: colors.textSecondary, lineHeight: 26 },
+
+  // 5-C/D/E/F Feature sections
+  featureSection: {
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.xl,
+    borderTopWidth: 1, borderTopColor: colors.border,
+  },
+  featureSectionAlt: {
+    backgroundColor: colors.card,
+  },
+  featureTitle: { fontSize: 18, fontWeight: '800', color: colors.text, lineHeight: 26, marginBottom: spacing.md },
+  featureBody: { ...typography.body, color: colors.textSecondary, lineHeight: 24, marginBottom: spacing.md },
+
+  quoteBox: {
+    backgroundColor: colors.terracotta + '14',
+    borderLeftWidth: 3, borderLeftColor: colors.terracotta,
+    borderRadius: radius.sm, padding: spacing.md, marginTop: spacing.sm,
+  },
+  quoteBoxAlt: {
+    backgroundColor: colors.olive + '14',
+    borderLeftColor: colors.olive,
+  },
+  quoteBoxSubtle: {
+    backgroundColor: colors.border,
+    borderLeftColor: colors.textMuted,
+  },
+  quoteText: { ...typography.bodySmall, color: colors.textSecondary, lineHeight: 22, fontStyle: 'italic' },
+
+  noteBox: {
+    flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start',
+    backgroundColor: colors.creamDark, borderRadius: radius.sm,
+    padding: spacing.sm, marginTop: spacing.sm,
+  },
+  noteText: { flex: 1, fontSize: 12, color: colors.textMuted, lineHeight: 18 },
+
+  // 5-G Final CTA
+  finalCta: {
+    margin: spacing.md, backgroundColor: colors.terracotta,
+    borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center',
+  },
+  finalCtaTitle: { fontSize: 20, fontWeight: '800', color: colors.white, lineHeight: 28, textAlign: 'center', marginBottom: spacing.sm },
+  finalCtaBody: { fontSize: 14, color: 'rgba(255,255,255,0.88)', lineHeight: 22, textAlign: 'center', marginBottom: spacing.xl },
+  airbnbBtn: {
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.xl, paddingVertical: 14,
+    borderRadius: radius.full, marginBottom: spacing.sm,
+  },
+  airbnbBtnText: { color: colors.terracotta, fontWeight: '800', fontSize: 15 },
+  airbnbBtnDisabled: {
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    paddingHorizontal: spacing.xl, paddingVertical: 12,
+    borderRadius: radius.full, marginBottom: spacing.sm,
+  },
+  airbnbBtnDisabledText: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  airbnbNote: { fontSize: 11, color: 'rgba(255,255,255,0.65)', textAlign: 'center' },
+
+  // Bottom bar
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: colors.background,

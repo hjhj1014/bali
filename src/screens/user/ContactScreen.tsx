@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -9,6 +9,7 @@ import { colors, spacing, radius, typography } from '../../constants/theme';
 import { openKakaoChat, openWhatsApp } from '../../utils/kakao';
 import { RootStackParamList } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
+import { AIRBNB_URL } from '../../config/constants';
 
 type Nav = StackNavigationProp<RootStackParamList>;
 
@@ -16,12 +17,38 @@ export function ContactScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
 
+  const openAirbnb = () => {
+    if (AIRBNB_URL) Linking.openURL(AIRBNB_URL);
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t.contact.title}</Text>
         <Text style={styles.subtitle}>{t.contact.subtitle}</Text>
+      </View>
+
+      {/* ── Airbnb card (first) ── */}
+      <View style={styles.airbnbCard}>
+        <Text style={styles.airbnbCardTitle}>{t.contact.airbnbCardTitle}</Text>
+        <Text style={styles.airbnbCardDesc}>{t.contact.airbnbCardDesc}</Text>
+        {AIRBNB_URL ? (
+          <TouchableOpacity style={styles.airbnbButton} onPress={openAirbnb}>
+            <Text style={styles.airbnbButtonText}>{t.contact.airbnbCardBtn}</Text>
+            <Ionicons name="arrow-forward" size={18} color={colors.white} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.airbnbButtonDisabled}>
+            <Text style={styles.airbnbButtonDisabledText}>{t.contact.airbnbComingSoon}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Questions section ── */}
+      <View style={styles.chatSection}>
+        <Text style={styles.chatTitle}>{t.contact.chatTitle}</Text>
+        <Text style={styles.chatDesc}>{t.contact.chatDesc}</Text>
       </View>
 
       {/* KakaoTalk */}
@@ -106,6 +133,35 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h1 },
   subtitle: { ...typography.bodySmall, marginTop: 4 },
+
+  // Airbnb card
+  airbnbCard: {
+    margin: spacing.md,
+    backgroundColor: colors.terracotta,
+    borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center',
+  },
+  airbnbCardTitle: { fontSize: 18, fontWeight: '800', color: colors.white, marginBottom: spacing.sm, textAlign: 'center' },
+  airbnbCardDesc: { fontSize: 14, color: 'rgba(255,255,255,0.88)', lineHeight: 22, textAlign: 'center', marginBottom: spacing.lg },
+  airbnbButton: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
+    borderRadius: radius.full, gap: spacing.sm,
+  },
+  airbnbButtonText: { color: colors.terracotta, fontWeight: '800', fontSize: 15 },
+  airbnbButtonDisabled: {
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)',
+    paddingHorizontal: spacing.xl, paddingVertical: 12,
+    borderRadius: radius.full,
+  },
+  airbnbButtonDisabledText: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+
+  // Questions section header
+  chatSection: {
+    paddingHorizontal: spacing.md, paddingTop: spacing.lg, paddingBottom: spacing.sm,
+  },
+  chatTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
+  chatDesc: { ...typography.body, color: colors.textSecondary, lineHeight: 22 },
 
   mainCard: {
     margin: spacing.md, backgroundColor: '#FEE500',

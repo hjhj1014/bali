@@ -7,6 +7,8 @@ const FLAGS: { lang: Lang; flag: string }[] = [
   { lang: 'ko', flag: '🇰🇷' },
   { lang: 'en', flag: '🇺🇸' },
   { lang: 'id', flag: '🇮🇩' },
+  { lang: 'uk', flag: '🇺🇦' },
+  { lang: 'es', flag: '🇨🇴' },
 ];
 
 export function LanguageSwitcher() {
@@ -30,10 +32,10 @@ export function LanguageSwitcher() {
 const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
-    gap: 2,
+    gap: 1,
     backgroundColor: 'rgba(255,255,255,0.94)',
     borderRadius: 22,
-    padding: 3,
+    padding: 2,
     shadowColor: '#000',
     shadowOpacity: 0.14,
     shadowRadius: 8,
@@ -41,9 +43,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   btn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -51,7 +53,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.1)',
   },
   flag: {
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
   },
 });
