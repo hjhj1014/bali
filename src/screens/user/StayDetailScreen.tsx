@@ -188,7 +188,7 @@ export function StayDetailScreen() {
           <Text style={styles.airbnbNote}>{t.detail.airbnbNote}</Text>
         </View>
 
-        <View style={{ height: 160 }} />
+        <View style={{ height: 240 }} />
       </ScrollView>
 
       {/* ── Sticky contact bar ── */}
@@ -206,7 +206,7 @@ export function StayDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background, overflow: 'hidden' },
   scroll: { flex: 1 },
 
   mainPhoto: { width, height: 300 },
