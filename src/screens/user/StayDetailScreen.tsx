@@ -39,7 +39,7 @@ export function StayDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         {/* ── Photo gallery ── */}
         <View>
@@ -188,10 +188,9 @@ export function StayDetailScreen() {
           <Text style={styles.airbnbNote}>{t.detail.airbnbNote}</Text>
         </View>
 
-        <View style={{ height: 240 }} />
       </ScrollView>
 
-      {/* ── Sticky contact bar ── */}
+      {/* ── Contact bar — normal flow (not absolute) for mobile web scroll ── */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.kakaoBtn} onPress={openKakaoChat}>
           <Ionicons name="chatbubble-ellipses" size={20} color="#3A1D1D" />
@@ -206,8 +205,9 @@ export function StayDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, overflow: 'hidden' },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
 
   mainPhoto: { width, height: 300 },
   backBtn: {
@@ -324,7 +324,6 @@ const styles = StyleSheet.create({
 
   // Bottom bar
   bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: colors.background,
     paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 28,
     borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm,
