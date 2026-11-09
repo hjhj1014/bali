@@ -1,3 +1,6 @@
 node_modules/
 # Expo export creates a Unicode RTL-prefixed images folder — never commit it
 dist/‫images/
+
+# Expo local machine cache — never commit
+.expo/
